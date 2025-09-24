@@ -1,0 +1,5 @@
+{
+  "name": "Gestiona tu negocio gratis",
+  "description": "A web application that replicates the core functionalities of the Treinta app for small business management. It allows users to track sales, manage inventory, record expenses, and gain AI-powered insights into their business performance.",
+  "requestFramePermissions": []
+}
