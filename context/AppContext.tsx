@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   DocumentData,
   DocumentSnapshot,
+  deleteDoc,
 } from 'firebase/firestore';
 import { auth, db, DEMO_MODE } from '../firebaseConfig';
 import type {
@@ -144,6 +145,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || savedTheme === 'light') {
         return savedTheme;
+    }
+    // If no theme is saved, check system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
     }
     return 'light';
   });
@@ -427,6 +432,37 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const updateProduct = async (product: Product) => {
+    const { id, ...data } = product;
+    if (DEMO_MODE) {
+        setProducts(prev => prev.map(p => p.id === id ? product : p));
+        return;
+    }
+    if (!currentUser) throw new Error("Not authenticated");
+    try {
+        await updateDoc(doc(db, 'users', currentUser.uid, 'products', id), data);
+        setProducts(prev => prev.map(p => p.id === id ? product : p));
+    } catch (error) {
+        console.error("Error updating product: ", error);
+        showDbError("Actualizar producto");
+    }
+  };
+
+  const deleteProduct = async (productId: string) => {
+      if (DEMO_MODE) {
+          setProducts(prev => prev.filter(p => p.id !== productId));
+          return;
+      }
+      if (!currentUser) throw new Error("Not authenticated");
+      try {
+          await deleteDoc(doc(db, 'users', currentUser.uid, 'products', productId));
+          setProducts(prev => prev.filter(p => p.id !== productId));
+      } catch (error) {
+          console.error("Error deleting product: ", error);
+          showDbError("Eliminar producto");
+      }
+  };
+
   const value = {
     products,
     transactions,
@@ -444,6 +480,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     updateCompanyInfo,
     addPayment,
     updateProductStock,
+    updateProduct,
+    deleteProduct,
     theme,
     toggleTheme,
   };

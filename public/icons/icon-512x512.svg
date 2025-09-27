@@ -1,0 +1,15 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGrad" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#4E97DC" />
+      <stop offset="100%" stop-color="#1B4E80" />
+    </radialGradient>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="url(#bgGrad)" />
+  <g transform="translate(15, 10) scale(0.7)">
+    <path d="M50 15 L10 35 V70 C10 95 50 110 50 110 S90 95 90 70 V35 Z" fill="white" />
+    <path d="M30 80 V60 H40 V80 Z M50 80 V40 H60 V80 Z M70 80 V50 H80 V80 Z" fill="#34D399" />
+    <path d="M25 55 l25 -25 l25 15" stroke="#10B981" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M65 45 l10 -10 l-10 -10" stroke="#10B981" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

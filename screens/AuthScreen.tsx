@@ -55,24 +55,24 @@ const AuthScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 dark:bg-slate-900">
+    <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4 dark:bg-gray-900">
       <div className="w-full max-w-sm mx-auto">
         <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-green-600">Bienvenido</h1>
-            <p className="text-slate-500 dark:text-slate-400">Gestiona tu negocio de forma fácil y gratis.</p>
+            <p className="text-gray-500 dark:text-gray-400">Gestiona tu negocio de forma fácil y gratis.</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-6 dark:bg-slate-800">
-          <div className="flex border-b mb-6 dark:border-slate-700">
+        <div className="bg-white rounded-2xl shadow-xl p-6 dark:bg-gray-800">
+          <div className="flex border-b mb-6 dark:border-gray-700">
             <button
               onClick={() => switchView(true)}
-              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400 dark:text-slate-500'}`}
+              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-400 dark:text-gray-500'}`}
             >
               Iniciar Sesión
             </button>
             <button
               onClick={() => switchView(false)}
-              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${!isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400 dark:text-slate-500'}`}
+              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${!isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-400 dark:text-gray-500'}`}
             >
               Crear Cuenta
             </button>
@@ -81,35 +81,35 @@ const AuthScreen: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLoginView && (
               <div>
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Nombre</label>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre</label>
                 <input
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   placeholder="Tu nombre completo"
                   required
                 />
               </div>
             )}
             <div>
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Correo Electrónico</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Correo Electrónico</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                 placeholder="tu@email.com"
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Contraseña</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                 placeholder="••••••••"
                 required
               />

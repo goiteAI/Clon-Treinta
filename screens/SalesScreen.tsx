@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
@@ -278,9 +276,9 @@ const SalesScreen: React.FC = () => {
         Transferencia: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0l-1.5-1.5a2 2 0 112.828-2.828l1.5 1.5 3-3zM3 4a1 1 0 00-1 1v10a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1H3z" clipRule="evenodd" /></svg>,
     };
 
-// The type of 'value' from the recharts Tooltip formatter can be a string, number, or array.
-// We handle the expected 'number' type for currency formatting and safely convert others to string.
-// FIX: Changed `unknown` to `any` to resolve a potential type conflict with the recharts library's formatter prop.
+    // FIX: Changed type of value from 'unknown' to 'any' to resolve a TypeScript error.
+    // The recharts library's formatter can receive various types, so 'any' is more flexible
+    // while the internal type check maintains runtime safety.
     const currencyTooltipFormatter = (value: any) => {
         if (typeof value === 'number') {
             return formatCurrency(value);

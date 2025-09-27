@@ -38,7 +38,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <main className="pb-16">
           {renderContent()}
         </main>
@@ -53,7 +53,7 @@ const AppContent: React.FC = () => {
     if (currentUser === undefined) {
         // Still determining auth state, show a loader
         return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
             </div>
         )

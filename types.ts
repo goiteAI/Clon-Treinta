@@ -77,6 +77,8 @@ export interface AppContextType {
   updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
   addPayment: (transactionId: string, amount: number) => Promise<void>;
   updateProductStock: (productId: string, newStock: number) => Promise<void>;
+  updateProduct: (product: Product) => Promise<void>;
+  deleteProduct: (productId: string) => Promise<void>;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 }
