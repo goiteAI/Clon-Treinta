@@ -11,7 +11,7 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ page, title, icon, currentPage, setCurrentPage }) => {
   const isActive = currentPage === page;
-  const color = isActive ? 'text-green-500' : 'text-slate-500';
+  const color = isActive ? 'text-green-500' : 'text-slate-500 dark:text-slate-400';
 
   return (
     <button
@@ -82,7 +82,7 @@ const BottomNav: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => v
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-t-md z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-t-md z-40 dark:bg-slate-800 dark:border-slate-700">
       <div className="flex justify-around max-w-screen-md mx-auto">
         {navItems.map(item => (
           <NavItem

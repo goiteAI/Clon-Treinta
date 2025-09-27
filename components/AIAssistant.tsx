@@ -28,19 +28,19 @@ const AIAssistant: React.FC = () => {
     const lines = text.split('\n');
     return lines.map((line, index) => {
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-md font-bold text-slate-700 mt-3 mb-1">{line.substring(4)}</h3>;
+        return <h3 key={index} className="text-md font-bold text-slate-700 dark:text-slate-300 mt-3 mb-1">{line.substring(4)}</h3>;
       }
       if (line.startsWith('* ')) {
-        return <li key={index} className="text-slate-600 ml-5 list-disc">{line.substring(2)}</li>;
+        return <li key={index} className="text-slate-600 dark:text-slate-300 ml-5 list-disc">{line.substring(2)}</li>;
       }
-      return <p key={index} className="text-slate-600 mb-2">{line}</p>;
+      return <p key={index} className="text-slate-600 dark:text-slate-300 mb-2">{line}</p>;
     });
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm">
+    <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold text-slate-800">Asistente IA</h2>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Asistente IA</h2>
         <button
           onClick={handleGetInsights}
           disabled={isLoading}
@@ -61,7 +61,7 @@ const AIAssistant: React.FC = () => {
                 {renderMarkdown(insights)}
             </div>
         )}
-        {!isLoading && !insights && <p className="text-sm text-slate-500">Haz clic para obtener un análisis de tu negocio con IA.</p>}
+        {!isLoading && !insights && <p className="text-sm text-slate-500 dark:text-slate-400">Haz clic para obtener un análisis de tu negocio con IA.</p>}
       </div>
     </div>
   );

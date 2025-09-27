@@ -5,15 +5,35 @@ import type { Transaction, Expense } from '../types';
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const getBusinessInsights = async (transactions: Transaction[], expenses: Expense[]): Promise<string> => {
+  // Sanitize data to create clean, plain objects for JSON serialization.
+  // This avoids circular reference issues that can arise from complex objects returned by Firestore.
+  const sanitizeTransaction = (t: Transaction) => ({
+    totalAmount: t.totalAmount,
+    date: t.date,
+    paymentMethod: t.paymentMethod,
+    ...(t.contactId && { contactId: t.contactId }),
+    items: t.items.map(i => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
+  });
+
+  const sanitizeExpense = (e: Expense) => ({
+    amount: e.amount,
+    category: e.category,
+    date: e.date,
+    description: e.description,
+  });
+
+  const transactionsForPrompt = transactions.slice(0, 20).map(sanitizeTransaction);
+  const expensesForPrompt = expenses.slice(0, 20).map(sanitizeExpense);
+
   const prompt = `
     Eres un asesor de negocios experto para pequeñas tiendas y microempresas en Latinoamérica.
     Analiza los siguientes datos de transacciones y gastos en formato JSON.
     
     Transacciones:
-    ${JSON.stringify(transactions.slice(0, 20), null, 2)}
+    ${JSON.stringify(transactionsForPrompt, null, 2)}
     
     Gastos:
-    ${JSON.stringify(expenses.slice(0, 20), null, 2)}
+    ${JSON.stringify(expensesForPrompt, null, 2)}
     
     Basado en estos datos, proporciona un breve resumen del rendimiento del negocio y 3 sugerencias accionables y claras para mejorar la rentabilidad o la gestión.
     Formatea tu respuesta en Markdown simple, usando encabezados y listas. Sé conciso y directo.

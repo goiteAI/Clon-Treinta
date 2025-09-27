@@ -18,22 +18,29 @@ const AuthScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      let success = false;
       if (isLoginView) {
-        success = await login(email, password);
-        if (!success) setError('Email o contraseña incorrectos.');
+        await login(email, password);
       } else {
         if (!name) {
              setError('Por favor ingresa tu nombre.');
              setIsLoading(false);
              return;
         }
-        success = await signup(name, email, password);
-        if (!success) setError('Este correo electrónico ya está en uso.');
+        await signup(name, email, password);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Ocurrió un error. Por favor, inténtalo de nuevo.');
+      // More specific error messages for firebase auth
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Email o contraseña incorrectos.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('Este correo electrónico ya está en uso.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('La contraseña debe tener al menos 6 caracteres.');
+      }
+      else {
+        setError('Ocurrió un error. Por favor, inténtalo de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -48,24 +55,24 @@ const AuthScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 dark:bg-slate-900">
       <div className="w-full max-w-sm mx-auto">
         <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-green-600">Bienvenido</h1>
-            <p className="text-slate-500">Gestiona tu negocio de forma fácil y gratis.</p>
+            <p className="text-slate-500 dark:text-slate-400">Gestiona tu negocio de forma fácil y gratis.</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-6">
-          <div className="flex border-b mb-6">
+        <div className="bg-white rounded-2xl shadow-xl p-6 dark:bg-slate-800">
+          <div className="flex border-b mb-6 dark:border-slate-700">
             <button
               onClick={() => switchView(true)}
-              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400'}`}
+              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400 dark:text-slate-500'}`}
             >
               Iniciar Sesión
             </button>
             <button
               onClick={() => switchView(false)}
-              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${!isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400'}`}
+              className={`w-1/2 py-3 text-center font-semibold transition-colors duration-300 ${!isLoginView ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-400 dark:text-slate-500'}`}
             >
               Crear Cuenta
             </button>
@@ -74,35 +81,35 @@ const AuthScreen: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLoginView && (
               <div>
-                <label className="text-sm font-medium text-slate-600">Nombre</label>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Nombre</label>
                 <input
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                   placeholder="Tu nombre completo"
                   required
                 />
               </div>
             )}
             <div>
-              <label className="text-sm font-medium text-slate-600">Correo Electrónico</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Correo Electrónico</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                 placeholder="tu@email.com"
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-600">Contraseña</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Contraseña</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full p-3 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                 placeholder="••••••••"
                 required
               />

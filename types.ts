@@ -53,10 +53,9 @@ export interface CompanyInfo {
 }
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string; // In a real app, this would be a secure hash. Here it's plain text for simulation.
+  uid: string;
+  displayName: string | null;
+  email: string | null;
 }
 
 export type Page = 'dashboard' | 'sales' | 'inventory' | 'expenses' | 'contacts' | 'settings' | 'debts';
@@ -68,16 +67,18 @@ export interface AppContextType {
   contacts: Contact[];
   companyInfo: CompanyInfo;
   currentUser: User | null | undefined; // undefined means we are checking session
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
-  addExpense: (expense: Omit<Expense, 'id'>) => void;
-  addContact: (contact: Omit<Contact, 'id'>) => void;
-  updateCompanyInfo: (info: CompanyInfo) => void;
-  addPayment: (transactionId: string, amount: number) => void;
-  updateProductStock: (productId: string, newStock: number) => void;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+  addContact: (contact: Omit<Contact, 'id'>) => Promise<void>;
+  updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
+  addPayment: (transactionId: string, amount: number) => Promise<void>;
+  updateProductStock: (productId: string, newStock: number) => Promise<void>;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 export interface AppProviderProps {
