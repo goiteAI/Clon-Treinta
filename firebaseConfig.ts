@@ -6,7 +6,7 @@ import { getFirestore } from 'firebase/firestore';
 // Set this to 'true' to run the app in demo mode without connecting to Firebase.
 // The app will use local mock data and you won't need to log in.
 // Set this to 'false' to connect to your live Firebase backend.
-export const DEMO_MODE = true;
+export const DEMO_MODE = false;
 
 // Configuration from your Firebase project
 const firebaseConfig = {

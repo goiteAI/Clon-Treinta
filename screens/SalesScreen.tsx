@@ -280,7 +280,8 @@ const SalesScreen: React.FC = () => {
 
 // The type of 'value' from the recharts Tooltip formatter can be a string, number, or array.
 // We handle the expected 'number' type for currency formatting and safely convert others to string.
-    const currencyTooltipFormatter = (value: unknown) => {
+// FIX: Changed `unknown` to `any` to resolve a potential type conflict with the recharts library's formatter prop.
+    const currencyTooltipFormatter = (value: any) => {
         if (typeof value === 'number') {
             return formatCurrency(value);
         }
