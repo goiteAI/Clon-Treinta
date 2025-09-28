@@ -276,9 +276,10 @@ const SalesScreen: React.FC = () => {
         Transferencia: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0l-1.5-1.5a2 2 0 112.828-2.828l1.5 1.5 3-3zM3 4a1 1 0 00-1 1v10a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1H3z" clipRule="evenodd" /></svg>,
     };
 
-    // FIX: Changed type of value from 'unknown' to 'any' to resolve a TypeScript error.
-    // The recharts library's formatter can receive various types, so 'any' is more flexible
-    // while the internal type check maintains runtime safety.
+    // The recharts library's formatter can receive various types.
+    // This function safely handles the `any` type by checking if it's a number before formatting.
+    // FIX: Changed parameter type to 'any' to resolve a potential library typing issue,
+    // as recharts can pass values of various types.
     const currencyTooltipFormatter = (value: any) => {
         if (typeof value === 'number') {
             return formatCurrency(value);

@@ -8,15 +8,17 @@ import { getFirestore } from 'firebase/firestore';
 // Set this to 'false' to connect to your live Firebase backend.
 export const DEMO_MODE = false;
 
-// Configuration from your Firebase project
+// Configuration from your Firebase project - now loaded from environment variables
+// Vite's 'define' feature replaces these process.env variables with string literals during build.
 const firebaseConfig = {
-  apiKey: "AIzaSyCTaOzJtnE-56lBUesgO_HDTBsoDAm95V0",
-  authDomain: "gestiona-tu-negocio-8249a.firebaseapp.com",
-  projectId: "gestiona-tu-negocio-8249a",
-  storageBucket: "gestiona-tu-negocio-8249a.appspot.com",
-  messagingSenderId: "537652131003",
-  appId: "1:537652131003:web:3dd12b7151d55634b9a59e"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
