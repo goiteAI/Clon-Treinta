@@ -30,7 +30,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
         const dataUrl = await toPng(invoiceRef.current, { 
             cacheBust: true, 
             quality: 0.95,
-            pixelRatio: 2,
+            pixelRatio: 2.5, // Increased pixel ratio for better quality
             backgroundColor: 'white'
         });
         
@@ -66,51 +66,53 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
           {/* Company Info */}
           <div className="text-center">
             {companyInfo.logoUrl && <img src={companyInfo.logoUrl} alt="logo" className="w-20 h-20 mx-auto mb-2 rounded-full object-cover"/>}
-            <h3 className="font-bold text-lg text-black">{companyInfo.name}</h3>
-            <p className="text-xs text-gray-700">{companyInfo.address}</p>
-            <p className="text-xs text-gray-700">{companyInfo.phone}</p>
+            <h3 className="font-bold text-2xl text-pink-600">{companyInfo.name}</h3>
+            <p className="text-xs text-gray-500">{companyInfo.address}</p>
+            <p className="text-xs text-gray-500">{companyInfo.phone}</p>
           </div>
 
-          <div className="border-t border-dashed my-4"></div>
+          <div className="border-t border-dashed my-2"></div>
 
           {/* Transaction Info */}
-          <div className="flex justify-between text-sm">
-            <div className="text-gray-700">
+          <div className="grid grid-cols-2 text-sm gap-x-2 gap-y-1">
+            <div className="text-gray-600 font-medium">
               <p>Factura #:</p>
               <p>Fecha:</p>
+              {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>Vence:</p>)}
               <p>Cliente:</p>
               <p>Método de Pago:</p>
             </div>
-            <div className="text-right font-medium text-black">
+            <div className="text-right font-semibold text-black">
               <p>{transaction.id.slice(-6)}</p>
               <p>{new Date(transaction.date).toLocaleDateString('es-ES')}</p>
+              {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>{new Date(transaction.dueDate).toLocaleDateString('es-ES')}</p>)}
               <p>{getContactName(transaction.contactId)}</p>
               <p>{transaction.paymentMethod}</p>
             </div>
           </div>
           
-          <div className="border-t border-dashed my-4"></div>
+          <div className="border-t border-dashed my-2"></div>
 
           {/* Items */}
           <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left font-semibold pb-1 text-black">Producto</th>
-                  <th className="text-center font-semibold pb-1 text-black">Cant.</th>
-                  <th className="text-right font-semibold pb-1 text-black">Precio</th>
-                  <th className="text-right font-semibold pb-1 text-black">Total</th>
+                  <th className="text-left font-semibold pb-2 text-black">Producto</th>
+                  <th className="text-center font-semibold pb-2 text-black">Cant.</th>
+                  <th className="text-right font-semibold pb-2 text-black">Precio</th>
+                  <th className="text-right font-semibold pb-2 text-black">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {transaction.items.map(item => {
                   const product = getProduct(item.productId);
                   return (
-                    <tr key={item.productId} className="text-black">
-                      <td className="py-1">{product?.name || 'Producto no encontrado'}</td>
-                      <td className="text-center py-1">{item.quantity}</td>
-                      <td className="text-right py-1">{formatCurrency(item.unitPrice)}</td>
-                      <td className="text-right py-1">{formatCurrency(item.unitPrice * item.quantity)}</td>
+                    <tr key={item.productId} className="text-black border-b border-gray-100">
+                      <td className="py-2">{product?.name || 'Producto no encontrado'}</td>
+                      <td className="text-center py-2">{item.quantity}</td>
+                      <td className="text-right py-2">{formatCurrency(item.unitPrice)}</td>
+                      <td className="text-right py-2 font-medium">{formatCurrency(item.unitPrice * item.quantity)}</td>
                     </tr>
                   )
                 })}
@@ -118,16 +120,16 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
             </table>
           </div>
 
-          <div className="border-t border-dashed my-4"></div>
+          <div className="border-t border-dashed my-2"></div>
 
           {/* Total */}
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <div className="text-right">
-              <p className="text-gray-700">Total a Pagar:</p>
-              <p className="font-bold text-xl text-black">{formatCurrency(transaction.totalAmount)}</p>
+              <p className="text-gray-600 font-medium">Total a Pagar:</p>
+              <p className="font-bold text-2xl text-pink-600">{formatCurrency(transaction.totalAmount)}</p>
             </div>
           </div>
-          <div className="text-center text-xs text-gray-700 pt-4">
+          <div className="text-center text-xs text-gray-500 pt-4">
             <p>¡Gracias por su compra!</p>
           </div>
         </div>
