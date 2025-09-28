@@ -1,10 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Transaction, Expense } from '../types';
 
+// --- INTERRUPTOR PARA FUNCIONALIDAD DE IA ---
+// Cambiar a 'false' para desactivar las llamadas a la API de Gemini para pruebas.
+const GEMINI_ENABLED = false;
+
 // Per coding guidelines, initialize directly and assume API_KEY is set via environment variable.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const getBusinessInsights = async (transactions: Transaction[], expenses: Expense[]): Promise<string> => {
+  if (!GEMINI_ENABLED) {
+    return Promise.resolve(
+      "### Análisis con IA Desactivado\n\nEsta función está desactivada temporalmente para realizar pruebas de despliegue."
+    );
+  }
+
   // Sanitize data to create clean, plain objects for JSON serialization.
   // This avoids circular reference issues that can arise from complex objects returned by Firestore.
   const sanitizeTransaction = (t: Transaction) => ({

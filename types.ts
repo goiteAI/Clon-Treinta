@@ -52,12 +52,6 @@ export interface CompanyInfo {
     logoUrl: string;
 }
 
-export interface User {
-  uid: string;
-  displayName: string | null;
-  email: string | null;
-}
-
 export type Page = 'dashboard' | 'sales' | 'inventory' | 'expenses' | 'contacts' | 'settings' | 'debts';
 
 export interface AppContextType {
@@ -66,9 +60,6 @@ export interface AppContextType {
   expenses: Expense[];
   contacts: Contact[];
   companyInfo: CompanyInfo;
-  currentUser: User | null | undefined; // undefined means we are checking session
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;

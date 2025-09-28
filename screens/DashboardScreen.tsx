@@ -1,7 +1,7 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import AIAssistant from '../components/AIAssistant';
 import AddSaleModal from '../components/AddSaleModal';
 
 const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ title, value, color }) => (
@@ -50,8 +50,6 @@ const DashboardScreen: React.FC = () => {
           <StatCard title="Gastos de Hoy" value={formatCurrency(totalExpenses)} color="text-red-600" />
           <StatCard title="Utilidad" value={formatCurrency(profit)} color={profit >= 0 ? 'text-blue-600' : 'text-red-600'} />
         </div>
-
-        <AIAssistant />
         
       </div>
 

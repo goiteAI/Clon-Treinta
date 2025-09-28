@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppProvider, useAppContext } from './context/AppContext';
+import { AppProvider } from './context/AppContext';
 import type { Page } from './types';
 
 import BottomNav from './components/layout/BottomNav';
@@ -10,9 +10,8 @@ import ExpensesScreen from './screens/ExpensesScreen';
 import ContactsScreen from './screens/ContactsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebtsScreen from './screens/DebtsScreen';
-import AuthScreen from './screens/AuthScreen';
 
-// This component contains the main app view after a user has logged in.
+// This component contains the main app view.
 const MainApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
@@ -47,25 +46,11 @@ const MainApp: React.FC = () => {
   );
 };
 
-// This component checks for an active user session and routes accordingly.
-const AppContent: React.FC = () => {
-    const { currentUser } = useAppContext();
-    if (currentUser === undefined) {
-        // Still determining auth state, show a loader
-        return (
-            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
-            </div>
-        )
-    }
-    return currentUser ? <MainApp /> : <AuthScreen />;
-}
-
 
 const App: React.FC = () => {
   return (
     <AppProvider>
-      <AppContent />
+      <MainApp />
     </AppProvider>
   );
 };
