@@ -2,7 +2,8 @@
 import React, { useRef, useState } from 'react';
 import type { Transaction } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface InvoiceModalProps {
   transaction: Transaction;
@@ -26,38 +27,31 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
   }
 
   const handleShare = async () => {
-    const node = invoiceRef.current;
-    if (!node || !navigator.share) {
+    const invoiceElement = invoiceRef.current;
+    if (!invoiceElement || !navigator.share) {
         if(!navigator.share) alert("Tu navegador no soporta la función de compartir.");
         return;
     }
     setIsSharing(true);
 
-    // Create a clone to render off-screen without affecting the UI
-    const clone = node.cloneNode(true) as HTMLElement;
-    
-    // Style the clone to ensure it's fully rendered but invisible
-    clone.style.position = 'absolute';
-    clone.style.top = '-9999px';
-    clone.style.left = '0px';
-    clone.style.maxHeight = 'none'; // Remove height restriction
-    clone.style.overflow = 'visible'; // Ensure all content is visible
-    clone.style.width = `${node.offsetWidth}px`; // Match the original width
-
-    document.body.appendChild(clone);
-
     try {
-        const dataUrl = await toPng(clone, {
-            cacheBust: true,
-            quality: 0.95,
-            pixelRatio: 2.5,
-            backgroundColor: 'white',
+        const canvas = await html2canvas(invoiceElement, {
+            scale: 2, // Higher scale for better quality
+            backgroundColor: '#ffffff', // Ensure background is white
+            useCORS: true, // For images from other origins
         });
         
-        document.body.removeChild(clone); // Clean up the clone immediately
+        const imgData = canvas.toDataURL('image/png');
+        
+        // A4 page size in mm
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], `factura-${transaction.id.slice(-6)}.png`, { type: blob.type });
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        
+        const pdfBlob = pdf.output('blob');
+        const file = new File([pdfBlob], `factura-${transaction.id.slice(-6)}.pdf`, { type: 'application/pdf' });
 
         await navigator.share({
             files: [file],
@@ -66,11 +60,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
         });
 
     } catch (error) {
-        if(document.body.contains(clone)) {
-            document.body.removeChild(clone); // Ensure cleanup even on error
-        }
-        console.error('Error al compartir la factura:', error);
-        // Do not show an alert if the user simply cancelled the share dialog
+        console.error('Error al compartir la factura en PDF:', error);
         if ((error as DOMException)?.name !== 'AbortError') {
           alert('No se pudo compartir la factura. Inténtalo de nuevo.');
         }
@@ -90,88 +80,90 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
             </svg>
           </button>
         </div>
-        <div ref={invoiceRef} id="invoice-content" className="p-6 space-y-4 max-h-[70vh] overflow-y-auto bg-white print:max-h-full print:overflow-visible">
-          {/* Company Info */}
-          <div className="text-center">
-            {companyInfo.logoUrl && <img src={companyInfo.logoUrl} alt="logo" className="w-20 h-20 mx-auto mb-2 rounded-full object-cover"/>}
-            <h3 className="font-bold text-2xl text-pink-600">{companyInfo.name}</h3>
-            <p className="text-xs text-gray-500">{companyInfo.address}</p>
-            <p className="text-xs text-gray-500">{companyInfo.phone}</p>
-          </div>
+        <div id="invoice-content" className="max-h-[70vh] overflow-y-auto bg-white print:max-h-full print:overflow-visible">
+          <div ref={invoiceRef} className="p-6 space-y-4">
+              {/* Company Info */}
+              <div className="text-center">
+                {companyInfo.logoUrl && <img src={companyInfo.logoUrl} alt="logo" className="w-20 h-20 mx-auto mb-2 rounded-full object-cover"/>}
+                <h3 className="font-bold text-2xl text-pink-600">{companyInfo.name}</h3>
+                <p className="text-xs text-gray-500">{companyInfo.address}</p>
+                <p className="text-xs text-gray-500">{companyInfo.phone}</p>
+              </div>
 
-          <div className="border-t border-dashed my-2"></div>
+              <div className="border-t border-dashed my-2"></div>
 
-          {/* Transaction Info */}
-          <div className="grid grid-cols-2 text-sm gap-x-2 gap-y-1">
-            <div className="text-gray-600 font-medium">
-              <p>Factura #:</p>
-              <p>Fecha:</p>
-              {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>Vence:</p>)}
-              <p>Cliente:</p>
-              <p>Método de Pago:</p>
-            </div>
-            <div className="text-right font-semibold text-black">
-              <p>{transaction.id.slice(-6)}</p>
-              <p>{new Date(transaction.date).toLocaleDateString('es-ES')}</p>
-              {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>{new Date(transaction.dueDate).toLocaleDateString('es-ES')}</p>)}
-              <p>{getContactName(transaction.contactId)}</p>
-              <p>{transaction.paymentMethod}</p>
-            </div>
-          </div>
-          
-          <div className="border-t border-dashed my-2"></div>
-
-          {/* Items */}
-          <div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left font-semibold pb-2 text-pink-600">Producto</th>
-                  <th className="text-center font-semibold pb-2 text-pink-600">Cant.</th>
-                  <th className="text-right font-semibold pb-2 text-pink-600">Precio</th>
-                  <th className="text-right font-semibold pb-2 text-pink-600">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transaction.items.map(item => {
-                  const product = getProduct(item.productId);
-                  return (
-                    <tr key={item.productId} className="text-black border-b border-gray-100">
-                      <td className="py-2">{product?.name || 'Producto no encontrado'}</td>
-                      <td className="text-center py-2">{item.quantity}</td>
-                      <td className="text-right py-2">{formatCurrency(item.unitPrice)}</td>
-                      <td className="text-right py-2 font-medium">{formatCurrency(item.unitPrice * item.quantity)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="border-t border-dashed my-2"></div>
-
-          {/* Totals */}
-            <div className="text-right text-sm space-y-2 pt-2">
-                <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-600">Total a Pagar:</span>
-                    <span className="font-bold text-xl text-pink-600">{formatCurrency(transaction.totalAmount)}</span>
+              {/* Transaction Info */}
+              <div className="grid grid-cols-2 text-sm gap-x-2 gap-y-1">
+                <div className="text-gray-600 font-medium">
+                  <p>Factura #:</p>
+                  <p>Fecha:</p>
+                  {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>Vence:</p>)}
+                  <p>Cliente:</p>
+                  <p>Método de Pago:</p>
                 </div>
-                {transaction.paymentMethod === 'Crédito' && (
-                    <>
-                        <div className="flex justify-between items-center border-t pt-2 mt-2">
-                            <span className="font-medium text-gray-600">Total Pagado:</span>
-                            <span className="font-semibold text-green-600">{formatCurrency(totalPaid)}</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-yellow-100 p-2 rounded-md">
-                            <span className="font-bold text-yellow-800">Saldo Pendiente:</span>
-                            <span className="font-bold text-xl text-yellow-800">{formatCurrency(pendingBalance)}</span>
-                        </div>
-                    </>
-                )}
-            </div>
+                <div className="text-right font-semibold text-black">
+                  <p>{transaction.id.slice(-6)}</p>
+                  <p>{new Date(transaction.date).toLocaleDateString('es-ES')}</p>
+                  {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>{new Date(transaction.dueDate).toLocaleDateString('es-ES')}</p>)}
+                  <p>{getContactName(transaction.contactId)}</p>
+                  <p>{transaction.paymentMethod}</p>
+                </div>
+              </div>
+              
+              <div className="border-t border-dashed my-2"></div>
 
-          <div className="text-center text-xs text-gray-500 pt-4">
-            <p>¡Gracias por su compra!</p>
+              {/* Items */}
+              <div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left font-semibold pb-2 text-pink-600">Producto</th>
+                      <th className="text-center font-semibold pb-2 text-pink-600">Cant.</th>
+                      <th className="text-right font-semibold pb-2 text-pink-600">Precio</th>
+                      <th className="text-right font-semibold pb-2 text-pink-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transaction.items.map(item => {
+                      const product = getProduct(item.productId);
+                      return (
+                        <tr key={item.productId} className="text-black border-b border-gray-100">
+                          <td className="py-2">{product?.name || 'Producto no encontrado'}</td>
+                          <td className="text-center py-2">{item.quantity}</td>
+                          <td className="text-right py-2">{formatCurrency(item.unitPrice)}</td>
+                          <td className="text-right py-2 font-medium">{formatCurrency(item.unitPrice * item.quantity)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="border-t border-dashed my-2"></div>
+
+              {/* Totals */}
+                <div className="text-right text-sm space-y-2 pt-2">
+                    <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-600">Total a Pagar:</span>
+                        <span className="font-bold text-xl text-pink-600">{formatCurrency(transaction.totalAmount)}</span>
+                    </div>
+                    {transaction.paymentMethod === 'Crédito' && (
+                        <>
+                            <div className="flex justify-between items-center border-t pt-2 mt-2">
+                                <span className="font-medium text-gray-600">Total Pagado:</span>
+                                <span className="font-semibold text-green-600">{formatCurrency(totalPaid)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-yellow-100 p-2 rounded-md">
+                                <span className="font-bold text-yellow-800">Saldo Pendiente:</span>
+                                <span className="font-bold text-xl text-yellow-800">{formatCurrency(pendingBalance)}</span>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+              <div className="text-center text-xs text-gray-500 pt-4">
+                <p>¡Gracias por su compra!</p>
+              </div>
           </div>
         </div>
         <div className="flex justify-center gap-2 p-4 bg-slate-50 border-t rounded-b-lg dark:bg-slate-800/50 dark:border-slate-700 print:hidden">
@@ -181,7 +173,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
                 disabled={isSharing}
                 className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors font-semibold disabled:bg-blue-300"
             >
-                {isSharing ? 'Generando...' : 'Compartir'}
+                {isSharing ? 'Generando PDF...' : 'Compartir PDF'}
             </button>
              <button
                 type="button"
