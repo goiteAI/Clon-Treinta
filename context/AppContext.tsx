@@ -22,7 +22,7 @@ import {
   DocumentSnapshot,
   deleteDoc,
 } from 'firebase/firestore';
-import { auth, db, DEMO_MODE } from '../firebaseConfig';
+import { auth, db, DEMO_MODE, firebaseInitialized } from '../firebaseConfig';
 import type {
   AppContextType,
   AppProviderProps,
@@ -141,6 +141,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(initialCompanyInfo);
   const [currentUser, setCurrentUser] = useState<User | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [firebaseConfigError, setFirebaseConfigError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || savedTheme === 'light') {
@@ -168,6 +169,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    if (!DEMO_MODE && !firebaseInitialized) {
+        setFirebaseConfigError(
+            "La configuración para conectar con la base de datos (Firebase) es incorrecta o está incompleta. " +
+            "Por favor, asegúrate de haber configurado correctamente tus variables de entorno en Vercel. " +
+            "Necesitas añadir VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID, etc., con los valores de tu proyecto de Firebase."
+        );
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+    }
+
     if (DEMO_MODE) {
         setCurrentUser({ uid: 'demo_user', email: 'demo@example.com', displayName: 'Demo User' });
         setLoading(false);
@@ -462,6 +474,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           showDbError("Eliminar producto");
       }
   };
+
+  if (firebaseConfigError) {
+    return (
+        <div className="min-h-screen bg-red-50 text-red-900 flex flex-col items-center justify-center p-6 text-center">
+            <div className="max-w-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h1 className="text-3xl font-bold mb-3">Error de Configuración</h1>
+                <p className="mb-4">{firebaseConfigError}</p>
+                <p className="text-sm text-red-700">Una vez que hayas configurado las variables en Vercel, necesitarás volver a desplegar la aplicación para que los cambios tomen efecto.</p>
+            </div>
+        </div>
+    );
+  }
 
   const value = {
     products,
