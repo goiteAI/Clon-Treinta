@@ -26,17 +26,36 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
   }
 
   const handleShare = async () => {
-    if (!invoiceRef.current || !navigator.share) return;
+    const node = invoiceRef.current;
+    if (!node || !navigator.share) {
+        if(!navigator.share) alert("Tu navegador no soporta la función de compartir.");
+        return;
+    }
     setIsSharing(true);
 
+    // Create a clone to render off-screen without affecting the UI
+    const clone = node.cloneNode(true) as HTMLElement;
+    
+    // Style the clone to ensure it's fully rendered but invisible
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.left = '0px';
+    clone.style.maxHeight = 'none'; // Remove height restriction
+    clone.style.overflow = 'visible'; // Ensure all content is visible
+    clone.style.width = `${node.offsetWidth}px`; // Match the original width
+
+    document.body.appendChild(clone);
+
     try {
-        const dataUrl = await toPng(invoiceRef.current, { 
-            cacheBust: true, 
+        const dataUrl = await toPng(clone, {
+            cacheBust: true,
             quality: 0.95,
-            pixelRatio: 2.5, // Increased pixel ratio for better quality
-            backgroundColor: 'white'
+            pixelRatio: 2.5,
+            backgroundColor: 'white',
         });
         
+        document.body.removeChild(clone); // Clean up the clone immediately
+
         const blob = await (await fetch(dataUrl)).blob();
         const file = new File([blob], `factura-${transaction.id.slice(-6)}.png`, { type: blob.type });
 
@@ -47,8 +66,14 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
         });
 
     } catch (error) {
+        if(document.body.contains(clone)) {
+            document.body.removeChild(clone); // Ensure cleanup even on error
+        }
         console.error('Error al compartir la factura:', error);
-        alert('No se pudo compartir la factura. Inténtalo de nuevo.');
+        // Do not show an alert if the user simply cancelled the share dialog
+        if ((error as DOMException)?.name !== 'AbortError') {
+          alert('No se pudo compartir la factura. Inténtalo de nuevo.');
+        }
     } finally {
         setIsSharing(false);
     }
