@@ -1,9 +1,10 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import InvoiceModal from '../components/InvoiceModal';
 
 const AddSaleModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -136,7 +137,7 @@ const AddSaleModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <div className="font-bold text-xl text-right mb-4">Total: ${totalAmount.toLocaleString('es-CO')}</div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                             <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Crédito">Crédito</option>
@@ -278,18 +279,10 @@ const SalesScreen: React.FC = () => {
         Transferencia: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0l-1.5-1.5a2 2 0 112.828-2.828l1.5 1.5 3-3zM3 4a1 1 0 00-1 1v10a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1H3z" clipRule="evenodd" /></svg>,
     };
 
-    // FIX: Using `any` for the value argument is a pragmatic approach to handle recharts' complex typings.
-    // The type check inside ensures runtime safety.
-    const currencyTooltipFormatter = (value: any) => {
-        if (typeof value === 'number') {
-            return formatCurrency(value);
-        }
-        return null;
-    };
-
     const RADIAN = Math.PI / 180;
-    // FIX: Replaced `any` with a specific interface for props for type safety.
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: { cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, percent: number }) => {
+    // FIX: Reverting to `any` to fix a cryptic build error from recharts.
+    // The explicit typing was causing an incompatibility with the library.
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -369,7 +362,6 @@ const SalesScreen: React.FC = () => {
                                       <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
                                   ))}
                                   </Pie>
-                                  <Tooltip formatter={currencyTooltipFormatter} />
                                   <Legend />
                               </PieChart>
                           </ResponsiveContainer>
@@ -395,7 +387,7 @@ const SalesScreen: React.FC = () => {
                               </div>
                               <div>
                                   <label className="block text-sm font-medium">Método de pago</label>
-                                  <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as any)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                  <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as 'all' | 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                       <option value="all">Todos</option>
                                       <option value="Efectivo">Efectivo</option>
                                       <option value="Crédito">Crédito</option>
@@ -412,14 +404,14 @@ const SalesScreen: React.FC = () => {
                               {/* Sorting */}
                               <div>
                                   <label className="block text-sm font-medium">Ordenar por</label>
-                                  <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'amount')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                       <option value="date">Fecha</option>
                                       <option value="amount">Monto</option>
                                   </select>
                               </div>
                               <div>
                                   <label className="block text-sm font-medium">Orden</label>
-                                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                       <option value="desc">Descendente</option>
                                       <option value="asc">Ascendente</option>
                                   </select>

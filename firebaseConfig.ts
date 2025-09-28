@@ -2,8 +2,9 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// MODO DE PRODUCCIÓN:
-// DEMO_MODE está en 'false' para conectar con Firebase.
+// MODO DE DEMOSTRACIÓN:
+// Activado para evitar errores de API Key y permitir el despliegue.
+// Para conectar a tu base de datos real, cambia a 'false' y
 // ASEGÚRATE DE CONFIGURAR LAS VARIABLES DE ENTORNO EN VERCEL.
 export const DEMO_MODE = false;
 
