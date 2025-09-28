@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
@@ -276,19 +278,18 @@ const SalesScreen: React.FC = () => {
         Transferencia: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0l-1.5-1.5a2 2 0 112.828-2.828l1.5 1.5 3-3zM3 4a1 1 0 00-1 1v10a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1H3z" clipRule="evenodd" /></svg>,
     };
 
-    // The recharts library's formatter can receive various types.
-    // This function safely handles the `any` type by checking if it's a number before formatting.
-    // FIX: Changed parameter type to 'any' to resolve a potential library typing issue,
-    // as recharts can pass values of various types.
+    // FIX: Using `any` for the value argument is a pragmatic approach to handle recharts' complex typings.
+    // The type check inside ensures runtime safety.
     const currencyTooltipFormatter = (value: any) => {
         if (typeof value === 'number') {
             return formatCurrency(value);
         }
-        return String(value ?? '');
+        return null;
     };
 
     const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    // FIX: Replaced `any` with a specific interface for props for type safety.
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: { cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, percent: number }) => {
       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);

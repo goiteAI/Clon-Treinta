@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import type { Transaction } from '../types';
 import { useAppContext } from '../context/AppContext';
@@ -164,7 +163,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
         <div className="p-4 bg-slate-50 border-t flex justify-end gap-2 no-print dark:bg-slate-900/50 dark:border-slate-700">
           <button onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">Cerrar</button>
           {isShareSupported && 
-            <button onClick={handleShare} className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-md transition-colors">Compartir</button>
+            <button onClick={handleShare} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors">Compartir</button>
           }
           <button onClick={handlePrint} className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-md transition-colors">Imprimir / Guardar PDF</button>
         </div>

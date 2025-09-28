@@ -2,10 +2,9 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// DEVELOPMENT TOGGLE:
-// Set this to 'true' to run the app in demo mode without connecting to Firebase.
-// The app will use local mock data and you won't need to log in.
-// Set this to 'false' to connect to your live Firebase backend.
+// MODO DE PRODUCCIÓN:
+// DEMO_MODE está en 'false' para conectar con Firebase.
+// ASEGÚRATE DE CONFIGURAR LAS VARIABLES DE ENTORNO EN VERCEL.
 export const DEMO_MODE = false;
 
 // Configuration from your Firebase project - now loaded from environment variables
@@ -20,9 +19,20 @@ const firebaseConfig = {
 };
 
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let auth: any;
+let db: any;
 
-// Initialize Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Conditionally initialize Firebase.
+// This prevents the "invalid-api-key" error when running in DEMO_MODE without .env variables.
+if (DEMO_MODE) {
+  // In demo mode, these services are not used. Assign placeholders to satisfy exports.
+  auth = {};
+  db = {};
+} else {
+  // Initialize Firebase services for live mode.
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+
+export { auth, db };
