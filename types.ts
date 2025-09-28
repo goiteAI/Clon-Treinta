@@ -60,7 +60,7 @@ export interface AppContextType {
   expenses: Expense[];
   contacts: Contact[];
   companyInfo: CompanyInfo;
-  logout: () => Promise<void>;
+  resetData: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;

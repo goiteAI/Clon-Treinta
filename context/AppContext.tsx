@@ -9,7 +9,7 @@ import type {
   CompanyInfo,
 } from '../types';
 
-// Initial Data for demonstration
+// Initial Data for demonstration (used only if localStorage is empty)
 const initialProducts: Product[] = [
   { id: 'prod1', name: 'Coca-Cola 350ml', price: 2500, cost: 1500, stock: 100, imageUrl: 'https://picsum.photos/id/10/200' },
   { id: 'prod2', name: 'Papas Margarita Pollo', price: 2000, cost: 1200, stock: 80, imageUrl: 'https://picsum.photos/id/20/200' },
@@ -42,19 +42,11 @@ const initialTransactions: Transaction[] = [
     dueDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(),
     payments: [{ amount: 4000, date: new Date().toISOString()}]
   },
-  {
-    id: 'trans3',
-    items: [{ productId: 'prod5', quantity: 1, unitPrice: 1500 }],
-    totalAmount: 1500,
-    date: new Date().toISOString(),
-    paymentMethod: 'Transferencia',
-  },
 ];
 
 const initialExpenses: Expense[] = [
   { id: 'exp1', description: 'Arriendo Local', amount: 500000, category: 'Alquiler', date: new Date(new Date().setDate(1)).toISOString() },
   { id: 'exp2', description: 'Factura de Luz', amount: 120000, category: 'Servicios', date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString() },
-  { id: 'exp3', description: 'Compra de mercancía', amount: 300000, category: 'Inventario', date: new Date().toISOString() },
 ];
 
 const initialCompanyInfo: CompanyInfo = {
@@ -65,23 +57,43 @@ const initialCompanyInfo: CompanyInfo = {
 };
 
 
+// Custom hook to manage state with localStorage persistence
+function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [state, setState] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(`Error reading localStorage key “${key}”:`, error);
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch (error) {
+      console.error(`Error setting localStorage key “${key}”:`, error);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(initialCompanyInfo);
+  const [products, setProducts] = usePersistentState<Product[]>('treinta-products', initialProducts);
+  const [transactions, setTransactions] = usePersistentState<Transaction[]>('treinta-transactions', initialTransactions);
+  const [expenses, setExpenses] = usePersistentState<Expense[]>('treinta-expenses', initialExpenses);
+  const [contacts, setContacts] = usePersistentState<Contact[]>('treinta-contacts', initialContacts);
+  const [companyInfo, setCompanyInfo] = usePersistentState<CompanyInfo>('treinta-companyInfo', initialCompanyInfo);
+  
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-        return savedTheme;
-    }
-    // If no theme is saved, check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-    }
+    if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
     return 'light';
   });
 
@@ -99,9 +111,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const logout = async () => {
-    alert("Los datos se reiniciarán a los valores de ejemplo.");
-    window.location.reload();
+  const resetData = async () => {
+    if (window.confirm("¿Estás seguro de que quieres borrar todos tus datos y empezar de nuevo? Esta acción no se puede deshacer.")) {
+        localStorage.removeItem('treinta-products');
+        localStorage.removeItem('treinta-transactions');
+        localStorage.removeItem('treinta-expenses');
+        localStorage.removeItem('treinta-contacts');
+        localStorage.removeItem('treinta-companyInfo');
+        window.location.reload();
+    }
   }
 
   const addProduct = async (product: Omit<Product, 'id'>) => {
@@ -160,7 +178,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     expenses,
     contacts,
     companyInfo,
-    logout,
+    resetData,
     addProduct,
     addTransaction,
     addExpense,

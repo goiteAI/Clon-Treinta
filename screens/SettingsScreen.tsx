@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import type { CompanyInfo } from '../types';
 
 const SettingsScreen: React.FC = () => {
-    const { companyInfo, updateCompanyInfo, logout, theme, toggleTheme } = useAppContext();
+    const { companyInfo, updateCompanyInfo, resetData, theme, toggleTheme } = useAppContext();
     const [formState, setFormState] = useState<CompanyInfo>(companyInfo);
     const [isSaved, setIsSaved] = useState(false);
 
@@ -98,10 +98,10 @@ const SettingsScreen: React.FC = () => {
 
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                         <button
-                            onClick={logout}
+                            onClick={resetData}
                             className="w-full px-5 py-2 rounded-md text-white font-semibold bg-red-500 hover:bg-red-600 transition-colors"
                         >
-                            Cerrar Sesión
+                            Borrar Datos y Reiniciar
                         </button>
                     </div>
                 </div>
