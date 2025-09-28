@@ -113,14 +113,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const resetData = async () => {
     if (window.confirm("¿Estás seguro de que quieres borrar todos tus datos y empezar de nuevo? Esta acción no se puede deshacer.")) {
-        localStorage.removeItem('treinta-products');
-        localStorage.removeItem('treinta-transactions');
-        localStorage.removeItem('treinta-expenses');
-        localStorage.removeItem('treinta-contacts');
-        localStorage.removeItem('treinta-companyInfo');
-        window.location.reload();
+        // Set all data states to empty arrays to truly reset the app
+        setProducts([]);
+        setTransactions([]);
+        setExpenses([]);
+        setContacts([]);
+        // Reset company info to a blank slate
+        setCompanyInfo({
+            name: "Nombre de tu Negocio",
+            address: "",
+            phone: "",
+            logoUrl: ""
+        });
+        // The usePersistentState hook will automatically update localStorage.
+        // No page reload is needed.
     }
-  }
+  };
 
   const addProduct = async (product: Omit<Product, 'id'>) => {
     const newProduct = { ...product, id: `prod_${Date.now()}` };
