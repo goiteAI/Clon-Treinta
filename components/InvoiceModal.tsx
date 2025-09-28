@@ -18,6 +18,9 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
   const getContactName = (id?: string) => id ? contacts.find(c => c.id === id)?.name || 'Cliente Ocasional' : 'Cliente Ocasional';
   const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
+  const totalPaid = transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+  const pendingBalance = transaction.totalAmount - totalPaid;
+
   const handlePrint = () => {
       window.print();
   }
@@ -98,10 +101,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left font-semibold pb-2 text-black">Producto</th>
-                  <th className="text-center font-semibold pb-2 text-black">Cant.</th>
-                  <th className="text-right font-semibold pb-2 text-black">Precio</th>
-                  <th className="text-right font-semibold pb-2 text-black">Total</th>
+                  <th className="text-left font-semibold pb-2 text-pink-600">Producto</th>
+                  <th className="text-center font-semibold pb-2 text-pink-600">Cant.</th>
+                  <th className="text-right font-semibold pb-2 text-pink-600">Precio</th>
+                  <th className="text-right font-semibold pb-2 text-pink-600">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,13 +125,26 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
 
           <div className="border-t border-dashed my-2"></div>
 
-          {/* Total */}
-          <div className="flex justify-end pt-2">
-            <div className="text-right">
-              <p className="text-gray-600 font-medium">Total a Pagar:</p>
-              <p className="font-bold text-2xl text-pink-600">{formatCurrency(transaction.totalAmount)}</p>
+          {/* Totals */}
+            <div className="text-right text-sm space-y-2 pt-2">
+                <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600">Total a Pagar:</span>
+                    <span className="font-bold text-xl text-pink-600">{formatCurrency(transaction.totalAmount)}</span>
+                </div>
+                {transaction.paymentMethod === 'Crédito' && (
+                    <>
+                        <div className="flex justify-between items-center border-t pt-2 mt-2">
+                            <span className="font-medium text-gray-600">Total Pagado:</span>
+                            <span className="font-semibold text-green-600">{formatCurrency(totalPaid)}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-yellow-100 p-2 rounded-md">
+                            <span className="font-bold text-yellow-800">Saldo Pendiente:</span>
+                            <span className="font-bold text-xl text-yellow-800">{formatCurrency(pendingBalance)}</span>
+                        </div>
+                    </>
+                )}
             </div>
-          </div>
+
           <div className="text-center text-xs text-gray-500 pt-4">
             <p>¡Gracias por su compra!</p>
           </div>

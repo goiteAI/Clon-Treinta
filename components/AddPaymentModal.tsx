@@ -11,22 +11,28 @@ interface AddPaymentModalProps {
 const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ transaction, onClose }) => {
     const { addPayment } = useAppContext();
     const [amount, setAmount] = useState(0);
+    const [error, setError] = useState('');
 
     const totalPaid = useMemo(() => transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0, [transaction.payments]);
     const amountDue = transaction.totalAmount - totalPaid;
+    
+    const formatCurrency = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (amount <= 0 || amount > amountDue) {
-            // Basic validation
-            alert(`El monto debe ser mayor a 0 y menor o igual al saldo pendiente de ${formatCurrency(amountDue)}`);
+        setError('');
+
+        if (amount <= 0) {
+            setError('El monto del abono debe ser mayor a cero.');
+            return;
+        }
+        if (amount > amountDue) {
+            setError(`El monto no puede superar el saldo pendiente de ${formatCurrency(amountDue)}.`);
             return;
         }
         addPayment(transaction.id, amount);
         onClose();
     };
-    
-    const formatCurrency = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -54,6 +60,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ transaction, onClose 
                                 max={amountDue}
                                 autoFocus
                             />
+                            {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 p-4 bg-slate-50 border-t rounded-b-lg dark:bg-slate-900/50 dark:border-slate-700">
