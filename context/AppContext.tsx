@@ -19,13 +19,14 @@ const initialProducts: Product[] = [
 ];
 
 const initialContacts: Contact[] = [
-    { id: 'cont1', name: 'Cliente Frecuente 1', phone: '3001234567' },
-    { id: 'cont2', name: 'Vecino Tienda', phone: '3109876543' },
+    { id: 'cont1', name: 'Cliente Frecuente 1', phone: '3001234567', nextInvoiceNumber: 2 },
+    { id: 'cont2', name: 'Vecino Tienda', phone: '3109876543', nextInvoiceNumber: 2 },
 ];
 
 const initialTransactions: Transaction[] = [
   {
     id: 'trans1',
+    invoiceNumber: 1,
     items: [{ productId: 'prod1', quantity: 2, unitPrice: 2500 }, { productId: 'prod2', quantity: 1, unitPrice: 2000 }],
     totalAmount: 7000,
     date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
@@ -34,6 +35,7 @@ const initialTransactions: Transaction[] = [
   },
   {
     id: 'trans2',
+    invoiceNumber: 1,
     items: [{ productId: 'prod3', quantity: 5, unitPrice: 1800 }],
     totalAmount: 9000,
     date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
@@ -53,6 +55,7 @@ const initialCompanyInfo: CompanyInfo = {
     name: "Mi Tiendita de Barrio",
     address: "Calle Falsa 123, Bogotá",
     phone: "3000000000",
+    phone2: "",
     logoUrl: ""
 };
 
@@ -89,6 +92,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [expenses, setExpenses] = usePersistentState<Expense[]>('treinta-expenses', initialExpenses);
   const [contacts, setContacts] = usePersistentState<Contact[]>('treinta-contacts', initialContacts);
   const [companyInfo, setCompanyInfo] = usePersistentState<CompanyInfo>('treinta-companyInfo', initialCompanyInfo);
+  const [globalInvoiceCounter, setGlobalInvoiceCounter] = usePersistentState<number>('treinta-global-invoice-counter', 1);
   
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -123,6 +127,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             name: "Nombre de tu Negocio",
             address: "",
             phone: "",
+            phone2: "",
             logoUrl: ""
         });
         // The usePersistentState hook will automatically update localStorage.
@@ -135,25 +140,57 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setProducts(prev => [...prev, newProduct]);
   };
 
-  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = { ...transaction, id: `trans_${Date.now()}` };
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => {
+    let newInvoiceNumber: number;
+
+    if (transaction.contactId) {
+        const contact = contacts.find(c => c.id === transaction.contactId);
+        if (contact) {
+            newInvoiceNumber = contact.nextInvoiceNumber;
+            const updatedContacts = contacts.map(c => 
+                c.id === transaction.contactId 
+                    ? { ...c, nextInvoiceNumber: c.nextInvoiceNumber + 1 } 
+                    : c
+            );
+            setContacts(updatedContacts);
+        } else {
+            // Fallback for safety, e.g., if contact was deleted between selection and save.
+            newInvoiceNumber = globalInvoiceCounter;
+            setGlobalInvoiceCounter(prev => prev + 1);
+        }
+    } else {
+        newInvoiceNumber = globalInvoiceCounter;
+        setGlobalInvoiceCounter(prev => prev + 1);
+    }
+
+    const newTransaction = { ...transaction, id: `trans_${Date.now()}`, invoiceNumber: newInvoiceNumber };
     setTransactions(prev => [newTransaction, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    
+    // Update stock
     const updatedProducts = products.map(p => {
         const item = transaction.items.find(i => i.productId === p.id);
         if (item) return { ...p, stock: p.stock - item.quantity };
         return p;
     });
     setProducts(updatedProducts);
-  };
+};
   
   const addExpense = async (expense: Omit<Expense, 'id'>) => {
     const newExpense = { ...expense, id: `exp_${Date.now()}` };
     setExpenses(prev => [...prev, newExpense].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
 
-  const addContact = async (contact: Omit<Contact, 'id'>) => {
-    const newContact = { ...contact, id: `cont_${Date.now()}` };
+   const updateExpense = async (expense: Expense) => {
+    setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
+  const addContact = async (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => {
+    const newContact = { ...contact, id: `cont_${Date.now()}`, nextInvoiceNumber: 1 };
     setContacts(prev => [...prev, newContact]);
+  };
+
+  const updateContact = async (contact: Contact) => {
+    setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
   };
   
   const updateCompanyInfo = async (info: CompanyInfo) => {
@@ -165,6 +202,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setTransactions(prev => prev.map(t => 
         t.id === transactionId ? { ...t, payments: [...(t.payments || []), newPayment] } : t
     ));
+  };
+
+  const updatePayment = async (transactionId: string, paymentIndex: number, newAmount: number) => {
+    setTransactions(prev => prev.map(t => {
+        if (t.id === transactionId && t.payments && t.payments[paymentIndex]) {
+            const updatedPayments = [...t.payments];
+            updatedPayments[paymentIndex] = { ...updatedPayments[paymentIndex], amount: newAmount };
+            return { ...t, payments: updatedPayments };
+        }
+        return t;
+    }));
   };
   
   const updateProductStock = async (productId: string, newStock: number) => {
@@ -180,6 +228,51 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setProducts(prev => prev.filter(p => p.id !== productId));
   };
 
+  const updateTransaction = async (transaction: Transaction) => {
+    const oldTransaction = transactions.find(t => t.id === transaction.id);
+    if (!oldTransaction) return;
+
+    const productMap = new Map(products.map(p => [p.id, { ...p }]));
+
+    // Revert stock from the old transaction
+    for (const item of oldTransaction.items) {
+      const product = productMap.get(item.productId);
+      if (product) {
+        product.stock += item.quantity;
+      }
+    }
+
+    // Apply stock changes for the new transaction
+    for (const item of transaction.items) {
+      const product = productMap.get(item.productId);
+      if (product) {
+        product.stock -= item.quantity;
+      }
+    }
+
+    setProducts(Array.from(productMap.values()));
+    setTransactions(prev => prev.map(t => t.id === transaction.id ? transaction : t).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
+  const deleteTransaction = async (transactionId: string) => {
+    const transactionToDelete = transactions.find(t => t.id === transactionId);
+    if (!transactionToDelete) return;
+
+    // Restore stock
+    const updatedProducts = products.map(p => {
+        const item = transactionToDelete.items.find(i => i.productId === p.id);
+        if (item) {
+            return { ...p, stock: p.stock + item.quantity };
+        }
+        return p;
+    });
+    setProducts(updatedProducts);
+
+    // Remove transaction
+    setTransactions(prev => prev.filter(t => t.id !== transactionId));
+  };
+
+
   const value = {
     products,
     transactions,
@@ -190,12 +283,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addProduct,
     addTransaction,
     addExpense,
+    updateExpense,
     addContact,
+    updateContact,
     updateCompanyInfo,
     addPayment,
+    updatePayment,
     updateProductStock,
     updateProduct,
     deleteProduct,
+    updateTransaction,
+    deleteTransaction,
     theme,
     toggleTheme,
   };

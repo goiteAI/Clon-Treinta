@@ -1,12 +1,18 @@
-
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import type { Transaction } from '../types';
-import AddPaymentModal from '../components/AddPaymentModal';
+
+const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+);
 
 const DebtsScreen: React.FC = () => {
-    const { transactions, contacts } = useAppContext();
-    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const { transactions, contacts, addPayment, updatePayment } = useAppContext();
+    const [addingPaymentTo, setAddingPaymentTo] = useState<string | null>(null);
+    const [paymentAmount, setPaymentAmount] = useState<number>(0);
+    const [paymentError, setPaymentError] = useState<string>('');
+    const [editingPaymentInfo, setEditingPaymentInfo] = useState<{ transactionId: string; paymentIndex: number; amount: number } | null>(null);
 
     const debts = useMemo(() => {
         return transactions
@@ -27,6 +33,47 @@ const DebtsScreen: React.FC = () => {
             return total + (t.totalAmount - totalPaid);
         }, 0);
     }, [debts]);
+    
+    const handleSavePayment = (transactionId: string, amountDue: number) => {
+        setPaymentError('');
+
+        if (paymentAmount <= 0) {
+            setPaymentError('El monto del abono debe ser mayor a cero.');
+            return;
+        }
+        if (paymentAmount > amountDue) {
+            setPaymentError(`El monto no puede superar el saldo pendiente de ${formatCurrency(amountDue)}.`);
+            return;
+        }
+        addPayment(transactionId, paymentAmount);
+        setAddingPaymentTo(null); // Close the form on success
+        setPaymentAmount(0);
+    };
+
+    const handleSavePaymentEdit = (amountDue: number) => {
+        if (!editingPaymentInfo) return;
+        setPaymentError('');
+
+        const newAmount = editingPaymentInfo.amount;
+        if (newAmount <= 0) {
+            setPaymentError('El monto del abono debe ser mayor a cero.');
+            return;
+        }
+        
+        const originalPayment = transactions.find(t => t.id === editingPaymentInfo.transactionId)?.payments?.[editingPaymentInfo.paymentIndex];
+        const originalAmount = originalPayment?.amount || 0;
+        const remainingBalance = amountDue + originalAmount;
+
+        if (newAmount > remainingBalance) {
+            setPaymentError(`El monto no puede superar el saldo pendiente de ${formatCurrency(remainingBalance)}.`);
+            return;
+        }
+        
+        updatePayment(editingPaymentInfo.transactionId, editingPaymentInfo.paymentIndex, newAmount);
+        setEditingPaymentInfo(null);
+        setPaymentError('');
+    };
+
 
     return (
         <div>
@@ -83,13 +130,93 @@ const DebtsScreen: React.FC = () => {
                                         <p className="text-xs text-slate-400">Pendiente</p>
                                     </div>
                                 </div>
-                                <div className="mt-3 pt-3 border-t flex justify-end dark:border-slate-700">
-                                    <button
-                                        onClick={() => setSelectedTransaction(t)}
-                                        className="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors"
-                                    >
-                                        Registrar Abono
-                                    </button>
+
+                                <div className="mt-4 pt-4 border-t dark:border-slate-700 space-y-4">
+                                    {t.payments && t.payments.length > 0 && (
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Historial de Abonos</p>
+                                            <ul className="space-y-1 text-sm">
+                                                {t.payments.map((payment, index) => {
+                                                    const isEditing = editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index;
+                                                    return isEditing ? (
+                                                        <li key={index} className="bg-slate-50 p-2 rounded-lg dark:bg-slate-700/50">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    value={editingPaymentInfo.amount || ''}
+                                                                    onChange={e => setEditingPaymentInfo({...editingPaymentInfo, amount: parseFloat(e.target.value) || 0})}
+                                                                    className="flex-grow p-1 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => handleSavePaymentEdit(amountDue)} className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600">Guardar</button>
+                                                                <button onClick={() => setEditingPaymentInfo(null)} className="px-3 py-1 bg-slate-200 text-slate-700 text-xs font-semibold rounded-md hover:bg-slate-300 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500">Cancelar</button>
+                                                            </div>
+                                                            {paymentError && editingPaymentInfo?.transactionId === t.id && <p className="text-red-500 text-xs mt-1">{paymentError}</p>}
+                                                        </li>
+                                                    ) : (
+                                                        <li key={index} className="flex justify-between items-center text-slate-500 dark:text-slate-400 group">
+                                                            <span>{new Date(payment.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
+                                                                <button onClick={() => {
+                                                                    setEditingPaymentInfo({ transactionId: t.id, paymentIndex: index, amount: payment.amount });
+                                                                    setPaymentError('');
+                                                                }} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-blue-500">
+                                                                    <PencilIcon className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </li>
+                                                    )
+                                                })}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {addingPaymentTo === t.id ? (
+                                        <div className="bg-slate-50 p-3 rounded-lg dark:bg-slate-700/50">
+                                            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Registrar Nuevo Abono</p>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Monto"
+                                                    value={paymentAmount || ''}
+                                                    onChange={e => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                                                    className="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                    autoFocus
+                                                    min="1"
+                                                    max={amountDue}
+                                                />
+                                                <button
+                                                    onClick={() => handleSavePayment(t.id, amountDue)}
+                                                    className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors"
+                                                >
+                                                    Guardar
+                                                </button>
+                                                <button
+                                                    onClick={() => setAddingPaymentTo(null)}
+                                                    className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                                    aria-label="Cancelar"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            {paymentError && addingPaymentTo === t.id && <p className="text-red-500 text-xs mt-2">{paymentError}</p>}
+                                        </div>
+                                    ) : (
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={() => {
+                                                    setAddingPaymentTo(t.id);
+                                                    setPaymentAmount(0);
+                                                    setPaymentError('');
+                                                }}
+                                                className="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors"
+                                            >
+                                                Registrar Abono
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )
@@ -98,13 +225,6 @@ const DebtsScreen: React.FC = () => {
                     )}
                 </div>
             </div>
-
-            {selectedTransaction && (
-                <AddPaymentModal
-                    transaction={selectedTransaction}
-                    onClose={() => setSelectedTransaction(null)}
-                />
-            )}
         </div>
     );
 };

@@ -22,6 +22,7 @@ export interface Payment {
 
 export interface Transaction {
   id: string;
+  invoiceNumber: number;
   items: TransactionItem[];
   totalAmount: number;
   date: string; // ISO string
@@ -40,15 +41,17 @@ export interface Expense {
 }
 
 export interface Contact {
-  id: string;
+  id:string;
   name: string;
   phone: string;
+  nextInvoiceNumber: number;
 }
 
 export interface CompanyInfo {
     name: string;
     address: string;
     phone: string;
+    phone2: string;
     logoUrl: string;
 }
 
@@ -62,14 +65,19 @@ export interface AppContextType {
   companyInfo: CompanyInfo;
   resetData: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
-  addContact: (contact: Omit<Contact, 'id'>) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
+  addContact: (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => Promise<void>;
+  updateContact: (contact: Contact) => Promise<void>;
   updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
   addPayment: (transactionId: string, amount: number) => Promise<void>;
+  updatePayment: (transactionId: string, paymentIndex: number, newAmount: number) => Promise<void>;
   updateProductStock: (productId: string, newStock: number) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
+  updateTransaction: (transaction: Transaction) => Promise<void>;
+  deleteTransaction: (transactionId: string) => Promise<void>;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 }

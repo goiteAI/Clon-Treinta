@@ -1,29 +1,59 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
 
 interface AddSaleModalProps {
     onClose: () => void;
+    transactionToEdit?: Transaction | null;
 }
 
-const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
-    const { products, contacts, addTransaction } = useAppContext();
+const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit }) => {
+    const { products, contacts, addTransaction, updateTransaction } = useAppContext();
+    const isEditMode = !!transactionToEdit;
+
     const [cart, setCart] = useState<TransactionItem[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Crédito' | 'Transferencia'>('Efectivo');
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
+    const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
+
+    useEffect(() => {
+        if (isEditMode && transactionToEdit) {
+            setCart(transactionToEdit.items);
+            setPaymentMethod(transactionToEdit.paymentMethod);
+            setContactId(transactionToEdit.contactId || '');
+            setTransactionDate(new Date(transactionToEdit.date).toISOString().split('T')[0]);
+            if (transactionToEdit.dueDate && transactionToEdit.paymentMethod === 'Crédito') {
+                const due = new Date(transactionToEdit.dueDate);
+                const start = new Date(transactionToEdit.date);
+                const diffTime = Math.max(0, due.getTime() - start.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                setPaymentDays(diffDays);
+            } else {
+                setPaymentDays(0);
+            }
+        }
+    }, [isEditMode, transactionToEdit]);
+
+    const getAvailableStock = (product: Product) => {
+        if (!isEditMode || !transactionToEdit) {
+            return product.stock;
+        }
+        const originalItem = transactionToEdit.items.find(i => i.productId === product.id);
+        return product.stock + (originalItem?.quantity || 0);
+    };
 
     const handleAddProduct = (product: Product) => {
+        const availableStock = getAvailableStock(product);
+        if (availableStock <= 0) return;
+
         const existingItem = cart.find(item => item.productId === product.id);
         if (existingItem) {
-            if (existingItem.quantity < product.stock) {
+            if (existingItem.quantity < availableStock) {
                  setCart(cart.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item));
             }
         } else {
-            if(product.stock > 0) {
-                 setCart([...cart, { productId: product.id, quantity: 1, unitPrice: product.price }]);
-            }
+            setCart([...cart, { productId: product.id, quantity: 1, unitPrice: product.price }]);
         }
     };
     
@@ -31,7 +61,8 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
         
-        const validatedQuantity = Math.max(0, Math.min(product.stock, newQuantity));
+        const availableStock = getAvailableStock(product);
+        const validatedQuantity = Math.max(0, Math.min(availableStock, newQuantity));
 
         if (validatedQuantity === 0) {
             setCart(cart.filter(item => item.productId !== productId));
@@ -50,24 +81,38 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
         e.preventDefault();
         if (cart.length === 0) return;
 
+        const date = new Date(transactionDate);
+        // Adjust for local timezone to prevent off-by-one day errors
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
+
         const baseTransaction = {
             items: cart,
             totalAmount,
-            date: new Date().toISOString(),
+            date: date.toISOString(),
             paymentMethod,
         };
 
         const dueDate = (paymentMethod === 'Crédito' && paymentDays > 0)
-            ? new Date(new Date().setDate(new Date().getDate() + paymentDays)).toISOString()
+            ? new Date(new Date(baseTransaction.date).setDate(new Date(baseTransaction.date).getDate() + paymentDays)).toISOString()
             : undefined;
 
-        const newTransaction = {
-            ...baseTransaction,
-            ...(contactId ? { contactId } : {}),
-            ...(dueDate ? { dueDate } : {}),
-        };
-
-        addTransaction(newTransaction as Omit<Transaction, 'id'>);
+        if (isEditMode && transactionToEdit) {
+            const updatedTransaction: Transaction = {
+                ...transactionToEdit,
+                ...baseTransaction,
+                contactId: contactId || undefined,
+                dueDate: dueDate,
+            };
+            updateTransaction(updatedTransaction);
+        } else {
+            const newTransaction = {
+                ...baseTransaction,
+                ...(contactId ? { contactId } : {}),
+                ...(dueDate ? { dueDate } : {}),
+            };
+            addTransaction(newTransaction as Omit<Transaction, 'id'>);
+        }
+        
         onClose();
     };
     
@@ -77,18 +122,20 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[95vh] flex flex-col dark:bg-slate-800">
                 <div className="p-4 border-b dark:border-slate-700">
-                  <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">Registrar Venta</h2>
+                  <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">{isEditMode ? 'Editar Venta' : 'Registrar Venta'}</h2>
                 </div>
                 
                 <div className="p-4 flex-1 overflow-y-auto pr-2 space-y-4">
                     <div>
                         <h3 className="font-semibold text-slate-700 dark:text-slate-300">Productos Disponibles</h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                            {products.map(p => (
-                                <button key={p.id} onClick={() => handleAddProduct(p)} className={`p-2 border rounded-md text-center text-sm transition-colors ${p.stock <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500' : 'bg-green-50 hover:bg-green-100 dark:bg-green-900/50 dark:hover:bg-green-900'}`} disabled={p.stock <= 0}>
-                                    {p.name} <span className="text-xs block text-slate-500">({p.stock})</span>
+                            {products.map(p => {
+                                const availableStock = getAvailableStock(p);
+                                return (
+                                <button key={p.id} onClick={() => handleAddProduct(p)} className={`p-2 border rounded-md text-center text-sm transition-colors ${availableStock <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500' : 'bg-green-50 hover:bg-green-100 dark:bg-green-900/50 dark:hover:bg-green-900'}`} disabled={availableStock <= 0}>
+                                    {p.name} <span className="text-xs block text-slate-500">({availableStock})</span>
                                 </button>
-                            ))}
+                            )})}
                         </div>
                     </div>
 
@@ -99,6 +146,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
                               {cart.map(item => {
                                   const product = getProduct(item.productId);
                                   if (!product) return null;
+                                  const maxStock = getAvailableStock(product);
                                   return (
                                       <li key={item.productId} className="flex items-center gap-2 text-sm border-b pb-2 dark:border-slate-700">
                                           <div className="flex-grow">
@@ -112,7 +160,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
                                                   value={item.quantity}
                                                   onChange={(e) => handleUpdateQuantity(item.productId, parseInt(e.target.value, 10) || 0)}
                                                   className="w-12 text-center border rounded-md p-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                                  max={product.stock}
+                                                  max={maxStock}
                                                   min="0"
                                               />
                                               <button type="button" onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">+</button>
@@ -135,35 +183,46 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose }) => {
                 
                 <form onSubmit={handleSubmit} className="p-4 bg-slate-50 border-t dark:bg-slate-800/50 dark:border-slate-700">
                     <div className="font-bold text-xl text-right mb-4">Total: ${totalAmount.toLocaleString('es-CO')}</div>
-
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Crédito">Crédito</option>
-                        </select>
-                        <select value={contactId} onChange={e => setContactId(e.target.value)} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                         <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Fecha</label>
+                            <input
+                                type="date"
+                                value={transactionDate}
+                                onChange={e => setTransactionDate(e.target.value)}
+                                className="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            />
+                        </div>
+                        <select value={contactId} onChange={e => setContactId(e.target.value)} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent self-end dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                             <option value="">Cliente Ocasional</option>
                             {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
 
-                    {paymentMethod === 'Crédito' && (
-                        <div className="mb-3">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Plazo en días</label>
-                            <input
-                                type="number"
-                                placeholder="Ej: 30"
-                                value={paymentDays || ''}
-                                onChange={e => setPaymentDays(parseInt(e.target.value, 10))}
-                                className="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                            />
-                        </div>
-                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                         <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Crédito">Crédito</option>
+                        </select>
+                        {paymentMethod === 'Crédito' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Plazo en días</label>
+                                <input
+                                    type="number"
+                                    placeholder="Ej: 30"
+                                    value={paymentDays || ''}
+                                    onChange={e => setPaymentDays(parseInt(e.target.value, 10))}
+                                    className="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                />
+                            </div>
+                        )}
+                    </div>
                     
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 mt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md transition-colors dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-slate-100">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors">Guardar Venta</button>
+                        <button type="submit" className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors">{isEditMode ? 'Guardar Cambios' : 'Guardar Venta'}</button>
                     </div>
                 </form>
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import type { Transaction } from '../types';
 import { useAppContext } from '../context/AppContext';
@@ -35,27 +34,34 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
     setIsSharing(true);
 
     try {
+        // Render the invoice content to a canvas with high resolution
         const canvas = await html2canvas(invoiceElement, {
-            scale: 2, // Higher scale for better quality
-            backgroundColor: '#ffffff', // Ensure background is white
-            useCORS: true, // For images from other origins
+            scale: 2, // Higher scale for better resolution, allowing for zoom.
+            backgroundColor: '#ffffff',
+            useCORS: true,
         });
-        
-        const imgData = canvas.toDataURL('image/png');
-        
-        // A4 page size in mm
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+
+        // Create a PDF with custom dimensions that match the canvas.
+        // This ensures the entire invoice fits on a single, potentially long, page.
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'px', // Use pixels for a 1:1 mapping with the canvas
+            format: [imgWidth, imgHeight]
+        });
+
+        // Add the canvas image to the PDF, covering the entire page.
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
         
         const pdfBlob = pdf.output('blob');
-        const file = new File([pdfBlob], `factura-${transaction.id.slice(-6)}.pdf`, { type: 'application/pdf' });
+        const file = new File([pdfBlob], `factura-${transaction.invoiceNumber}.pdf`, { type: 'application/pdf' });
 
         await navigator.share({
             files: [file],
-            title: `Factura ${transaction.id.slice(-6)}`,
+            title: `Factura #${transaction.invoiceNumber}`,
             text: '¡Gracias por su compra!',
         });
 
@@ -87,7 +93,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
                 {companyInfo.logoUrl && <img src={companyInfo.logoUrl} alt="logo" className="w-20 h-20 mx-auto mb-2 rounded-full object-cover"/>}
                 <h3 className="font-bold text-2xl text-pink-600">{companyInfo.name}</h3>
                 <p className="text-xs text-gray-500">{companyInfo.address}</p>
-                <p className="text-xs text-gray-500">{companyInfo.phone}</p>
+                <p className="text-xs text-gray-500">
+                  {companyInfo.phone}
+                  {companyInfo.phone2 && ` / ${companyInfo.phone2}`}
+                </p>
               </div>
 
               <div className="border-t border-dashed my-2"></div>
@@ -102,7 +111,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
                   <p>Método de Pago:</p>
                 </div>
                 <div className="text-right font-semibold text-black">
-                  <p>{transaction.id.slice(-6)}</p>
+                  <p>{transaction.invoiceNumber}</p>
                   <p>{new Date(transaction.date).toLocaleDateString('es-ES')}</p>
                   {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>{new Date(transaction.dueDate).toLocaleDateString('es-ES')}</p>)}
                   <p>{getContactName(transaction.contactId)}</p>

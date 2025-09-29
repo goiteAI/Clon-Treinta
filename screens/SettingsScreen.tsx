@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { CompanyInfo } from '../types';
@@ -68,6 +67,10 @@ const SettingsScreen: React.FC = () => {
                         <div>
                             <label htmlFor="phone" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
                             <input type="tel" id="phone" name="phone" value={formState.phone} onChange={handleInputChange} className="mt-1 w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"/>
+                        </div>
+                        <div>
+                            <label htmlFor="phone2" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono 2 (Opcional)</label>
+                            <input type="tel" id="phone2" name="phone2" value={formState.phone2} onChange={handleInputChange} className="mt-1 w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"/>
                         </div>
                         <div className="flex justify-end">
                             <button type="submit" className={`px-5 py-2 rounded-md text-white font-semibold transition-all duration-300 ${isSaved ? 'bg-blue-500' : 'bg-green-500 hover:bg-green-600'}`}>
