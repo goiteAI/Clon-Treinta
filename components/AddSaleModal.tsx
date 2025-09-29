@@ -16,6 +16,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
     const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
+    const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (isEditMode && transactionToEdit) {
@@ -69,6 +70,12 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
         } else {
             setCart(cart.map(item => item.productId === productId ? { ...item, quantity: validatedQuantity } : item));
         }
+
+        setQuantityInputs(prev => {
+            const newState = {...prev};
+            delete newState[productId];
+            return newState;
+        });
     };
 
     const handleRemoveItem = (productId: string) => {
@@ -157,8 +164,17 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                                               <button type="button" onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">-</button>
                                               <input
                                                   type="number"
-                                                  value={item.quantity}
-                                                  onChange={(e) => handleUpdateQuantity(item.productId, parseInt(e.target.value, 10) || 0)}
+                                                  value={quantityInputs[item.productId] ?? item.quantity}
+                                                  onFocus={() => {
+                                                    setQuantityInputs(prev => ({ ...prev, [item.productId]: String(item.quantity) }));
+                                                  }}
+                                                  onChange={(e) => {
+                                                    setQuantityInputs(prev => ({ ...prev, [item.productId]: e.target.value }));
+                                                  }}
+                                                  onBlur={(e) => {
+                                                    const newQuantity = parseInt(e.target.value, 10) || 0;
+                                                    handleUpdateQuantity(item.productId, newQuantity);
+                                                  }}
                                                   className="w-12 text-center border rounded-md p-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                                   max={maxStock}
                                                   min="0"

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
 );
@@ -50,26 +50,32 @@ const DebtsScreen: React.FC = () => {
         setPaymentAmount(0);
     };
 
-    const handleSavePaymentEdit = (amountDue: number) => {
+    const handleSavePaymentEdit = () => {
         if (!editingPaymentInfo) return;
         setPaymentError('');
 
-        const newAmount = editingPaymentInfo.amount;
+        const { transactionId, paymentIndex, amount: newAmount } = editingPaymentInfo;
+        
+        const transaction = transactions.find(t => t.id === transactionId);
+        if (!transaction) return;
+
+        const originalPayment = transaction.payments?.[paymentIndex];
+        const originalAmount = originalPayment?.amount || 0;
+
+        const totalPaidWithoutOriginal = (transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0) - originalAmount;
+        const maxAllowedAmount = transaction.totalAmount - totalPaidWithoutOriginal;
+
         if (newAmount <= 0) {
             setPaymentError('El monto del abono debe ser mayor a cero.');
             return;
         }
         
-        const originalPayment = transactions.find(t => t.id === editingPaymentInfo.transactionId)?.payments?.[editingPaymentInfo.paymentIndex];
-        const originalAmount = originalPayment?.amount || 0;
-        const remainingBalance = amountDue + originalAmount;
-
-        if (newAmount > remainingBalance) {
-            setPaymentError(`El monto no puede superar el saldo pendiente de ${formatCurrency(remainingBalance)}.`);
+        if (newAmount > maxAllowedAmount) {
+            setPaymentError(`El monto no puede superar el saldo pendiente de ${formatCurrency(maxAllowedAmount)}.`);
             return;
         }
         
-        updatePayment(editingPaymentInfo.transactionId, editingPaymentInfo.paymentIndex, newAmount);
+        updatePayment(transactionId, paymentIndex, newAmount);
         setEditingPaymentInfo(null);
         setPaymentError('');
     };
@@ -144,17 +150,17 @@ const DebtsScreen: React.FC = () => {
                                                                 <input
                                                                     type="number"
                                                                     value={editingPaymentInfo.amount || ''}
-                                                                    onChange={e => setEditingPaymentInfo({...editingPaymentInfo, amount: parseFloat(e.target.value) || 0})}
+                                                                    onChange={e => setEditingPaymentInfo(info => info ? {...info, amount: parseFloat(e.target.value) || 0} : null)}
                                                                     className="flex-grow p-1 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                                                     autoFocus
                                                                 />
-                                                                <button onClick={() => handleSavePaymentEdit(amountDue)} className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600">Guardar</button>
+                                                                <button onClick={handleSavePaymentEdit} className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600">Guardar</button>
                                                                 <button onClick={() => setEditingPaymentInfo(null)} className="px-3 py-1 bg-slate-200 text-slate-700 text-xs font-semibold rounded-md hover:bg-slate-300 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500">Cancelar</button>
                                                             </div>
-                                                            {paymentError && editingPaymentInfo?.transactionId === t.id && <p className="text-red-500 text-xs mt-1">{paymentError}</p>}
+                                                            {paymentError && editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index && <p className="text-red-500 text-xs mt-1">{paymentError}</p>}
                                                         </li>
                                                     ) : (
-                                                        <li key={index} className="flex justify-between items-center text-slate-500 dark:text-slate-400 group">
+                                                        <li key={index} className="flex justify-between items-center text-slate-500 dark:text-slate-400 group p-1 rounded">
                                                             <span>{new Date(payment.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
@@ -196,7 +202,7 @@ const DebtsScreen: React.FC = () => {
                                                     className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                                     aria-label="Cancelar"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
                                                 </button>

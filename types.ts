@@ -68,8 +68,10 @@ export interface AppContextType {
   addTransaction: (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
+  deleteExpense: (expenseId: string) => Promise<void>;
   addContact: (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => Promise<void>;
   updateContact: (contact: Contact) => Promise<void>;
+  deleteContact: (contactId: string) => Promise<void>;
   updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
   addPayment: (transactionId: string, amount: number) => Promise<void>;
   updatePayment: (transactionId: string, paymentIndex: number, newAmount: number) => Promise<void>;

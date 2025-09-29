@@ -183,6 +183,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
    const updateExpense = async (expense: Expense) => {
     setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
+  
+  const deleteExpense = async (expenseId: string) => {
+      setExpenses(prev => prev.filter(e => e.id !== expenseId));
+  };
 
   const addContact = async (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => {
     const newContact = { ...contact, id: `cont_${Date.now()}`, nextInvoiceNumber: 1 };
@@ -191,6 +195,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const updateContact = async (contact: Contact) => {
     setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
+  };
+  
+  const deleteContact = async (contactId: string) => {
+      setContacts(prev => prev.filter(c => c.id !== contactId));
   };
   
   const updateCompanyInfo = async (info: CompanyInfo) => {
@@ -284,8 +292,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addTransaction,
     addExpense,
     updateExpense,
+    deleteExpense,
     addContact,
     updateContact,
+    deleteContact,
     updateCompanyInfo,
     addPayment,
     updatePayment,

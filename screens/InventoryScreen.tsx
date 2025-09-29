@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Product } from '../types';
 import EditStockModal from '../components/EditStockModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const ProductModal: React.FC<{ onClose: () => void; productToEdit?: Product | null }> = ({ onClose, productToEdit }) => {
     const { addProduct, updateProduct } = useAppContext();
@@ -96,31 +97,14 @@ const ProductModal: React.FC<{ onClose: () => void; productToEdit?: Product | nu
     );
 };
 
-const DeleteConfirmationModal: React.FC<{ product: Product; onConfirm: () => void; onCancel: () => void }> = ({ product, onConfirm, onCancel }) => {
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col dark:bg-slate-800">
-                <div className="p-6">
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Confirmar Eliminación</h2>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">¿Estás seguro de que quieres eliminar el producto "{product.name}"? Esta acción no se puede deshacer.</p>
-                </div>
-                <div className="flex justify-end gap-2 p-4 bg-slate-50 border-t rounded-b-lg dark:bg-slate-800/50 dark:border-slate-700">
-                    <button onClick={onCancel} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md transition-colors dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-slate-100">Cancelar</button>
-                    <button onClick={onConfirm} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors">Eliminar</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
 );
 
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.134H8.09a2.09 2.09 0 00-2.09 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
     </svg>
 );
@@ -188,13 +172,21 @@ const InventoryScreen: React.FC = () => {
                 ))}
             </div>
             <button onClick={handleOpenAddModal} className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105" aria-label="Añadir nuevo producto">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
             </button>
             {isProductModalOpen && <ProductModal productToEdit={productToEdit} onClose={() => setIsProductModalOpen(false)} />}
             {stockEditingProduct && <EditStockModal product={stockEditingProduct} onClose={() => setStockEditingProduct(null)} />}
-            {productToDelete && <DeleteConfirmationModal product={productToDelete} onConfirm={handleDeleteConfirm} onCancel={() => setProductToDelete(null)} />}
+            {productToDelete && (
+                <ConfirmationModal
+                    isOpen={!!productToDelete}
+                    onClose={() => setProductToDelete(null)}
+                    onConfirm={handleDeleteConfirm}
+                    title="Confirmar Eliminación"
+                    message={`¿Estás seguro de que quieres eliminar el producto "${productToDelete.name}"? Esta acción no se puede deshacer.`}
+                />
+            )}
         </div>
     );
 };
