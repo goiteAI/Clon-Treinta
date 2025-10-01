@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import AddSaleModal from '../components/AddSaleModal';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, LabelList } from 'recharts';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -21,9 +21,9 @@ const SubStat: React.FC<{ title: string; value: string; color?: string }> = ({ t
 
 
 const DashboardScreen: React.FC = () => {
-  const { transactions, expenses } = useAppContext();
+  const { transactions, expenses, theme } = useAppContext();
   const [isAddSaleModalOpen, setIsAddSaleModalOpen] = useState(false);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
@@ -90,10 +90,17 @@ const DashboardScreen: React.FC = () => {
     };
   }, [transactions, expenses, timePeriod]);
 
-  // FIX: Explicitly cast the value from Object.entries to a number to resolve a TypeScript type inference issue.
-  // This ensures that `entry.value` is correctly typed as a number for use in `formatCurrency` and the Pie chart.
-  const pieData = Object.entries(balanceData.salesByPaymentMethod).map(([name, value]) => ({ name, value: value as number }));
-  const COLORS = { 'Efectivo': '#10B981', 'Crédito': '#3B82F6', 'Transferencia': '#F59E0B' };
+  const PIE_COLORS = ['#16a34a', '#22c55e', '#4ade80']; // green-700, green-600, green-500
+
+  const pieDataWithPercent = useMemo(() => {
+    const rawData = Object.entries(balanceData.salesByPaymentMethod).map(([name, value]) => ({ name, value: value as number }));
+    const totalValue = rawData.reduce((sum, entry) => sum + entry.value, 0);
+    if (totalValue === 0) return [];
+    return rawData.map(entry => ({
+      ...entry,
+      percent: entry.value / totalValue,
+    }));
+  }, [balanceData.salesByPaymentMethod]);
 
 
   return (
@@ -133,47 +140,42 @@ const DashboardScreen: React.FC = () => {
                 </div>
 
                 {/* Right Side: Chart */}
-                {pieData.length > 0 ? (
-                    <div className="flex flex-col items-center">
-                        <div className="relative" style={{ width: '100%', height: 200 }}>
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <Pie 
-                                        data={pieData} 
-                                        dataKey="value" 
-                                        nameKey="name" 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius={55}
-                                        outerRadius={85}
-                                        fill="#8884d8"
-                                        paddingAngle={5}
-                                        cornerRadius={8}
-                                    >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                {pieDataWithPercent.length > 0 ? (
+                    <div className="relative" style={{ width: '100%', height: 250 }}>
+                        <ResponsiveContainer>
+                            <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
+                                <Pie
+                                    data={pieDataWithPercent}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius="65%"
+                                    outerRadius="85%"
+                                    fill="#8884d8"
+                                    paddingAngle={5}
+                                    cornerRadius={8}
+                                    labelLine={{ stroke: theme === 'dark' ? '#94a3b8' : '#64748b' }}
+                                    label={({ name }) => name}
+                                >
+                                    {pieDataWithPercent.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} className="focus:outline-none" />
                                     ))}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Total Ventas</p>
-                                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                                    {formatCurrency(balanceData.totalSales)}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-3 w-full max-w-xs mt-4">
-                            {pieData.map((entry, index) => (
-                                <div key={`legend-${index}`} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[entry.name as keyof typeof COLORS] }}></span>
-                                        <span className="text-slate-600 dark:text-slate-400">{entry.name}</span>
-                                    </div>
-                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(entry.value)}</span>
-                                </div>
-                            ))}
+                                    <LabelList
+                                        dataKey="percent"
+                                        position="inside"
+                                        formatter={(value) => value > 0.05 ? `${Math.round(value * 100)}%` : ''}
+                                        className="font-bold fill-white text-base"
+                                        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                                    />
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Total Ventas</p>
+                            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                                {formatCurrency(balanceData.totalSales)}
+                            </p>
                         </div>
                     </div>
                 ) : (

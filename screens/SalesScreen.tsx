@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import type { Transaction } from '../types';
+import type { Transaction, Contact } from '../types';
 import InvoiceModal from '../components/InvoiceModal';
 import AddSaleModal from '../components/AddSaleModal';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -18,8 +18,79 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const FilterIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+    </svg>
+);
 
-type SalesTab = 'history' | 'topProducts';
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+);
+
+type SalesTab = 'history' | 'topProducts' | 'topClients';
+
+const ContactPurchaseHistory: React.FC<{ contactId: string }> = ({ contactId }) => {
+    const { transactions, products } = useAppContext();
+
+    const history = useMemo(() => {
+        const contactTransactions = transactions.filter(t => t.contactId === contactId);
+
+        if (contactTransactions.length === 0) {
+            return { totalProducts: 0, topProducts: [] };
+        }
+
+        const productSales = new Map<string, { productId: string; quantity: number }>();
+        let totalProducts = 0;
+
+        contactTransactions.forEach(transaction => {
+            transaction.items.forEach(item => {
+                totalProducts += item.quantity;
+                const existing = productSales.get(item.productId);
+                if (existing) {
+                    productSales.set(item.productId, { ...existing, quantity: existing.quantity + item.quantity });
+                } else {
+                    productSales.set(item.productId, { productId: item.productId, quantity: item.quantity });
+                }
+            });
+        });
+
+        const topProducts = Array.from(productSales.values())
+            .sort((a, b) => b.quantity - a.quantity)
+            .map(sale => {
+                const product = products.find(p => p.id === sale.productId);
+                return { ...sale, product };
+            })
+            .filter(item => !!item.product);
+
+        return { totalProducts, topProducts };
+    }, [contactId, transactions, products]);
+
+    return (
+        <div className="mt-3 pt-3 border-t dark:border-slate-700">
+            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2">Historial de Compras</h4>
+            <div className="bg-slate-50 p-3 rounded-md mb-3 dark:bg-slate-700/50">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Total de productos comprados: <span className="font-bold text-lg text-green-600">{history.totalProducts}</span></p>
+            </div>
+            
+            {history.topProducts.length > 0 ? (
+                <ul className="space-y-2">
+                    {history.topProducts.map(item => (
+                        <li key={item.productId} className="flex justify-between items-center text-sm p-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded">
+                           <span className="text-slate-600 dark:text-slate-300">{item.product!.name}</span>
+                           <span className="font-semibold text-slate-800 dark:text-slate-100">{item.quantity} uds.</span>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-center text-slate-500 dark:text-slate-400">Este cliente aún no tiene compras registradas.</p>
+            )}
+        </div>
+    );
+};
+
 
 const TopProductsView: React.FC = () => {
     const { transactions, products } = useAppContext();
@@ -72,6 +143,79 @@ const TopProductsView: React.FC = () => {
     );
 };
 
+const TopClientsView: React.FC = () => {
+    const { transactions, contacts } = useAppContext();
+    const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+
+    const topClients = useMemo(() => {
+        const clientSales = new Map<string, { contactId: string; totalQuantity: number }>();
+
+        transactions.forEach(transaction => {
+            if (transaction.contactId) {
+                const totalItemsInTransaction = transaction.items.reduce((sum, item) => sum + item.quantity, 0);
+                const existing = clientSales.get(transaction.contactId);
+                if (existing) {
+                    clientSales.set(transaction.contactId, { ...existing, totalQuantity: existing.totalQuantity + totalItemsInTransaction });
+                } else {
+                    clientSales.set(transaction.contactId, { contactId: transaction.contactId, totalQuantity: totalItemsInTransaction });
+                }
+            }
+        });
+
+        return Array.from(clientSales.values())
+            .sort((a, b) => b.totalQuantity - a.totalQuantity)
+            .map(sale => {
+                const contact = contacts.find(c => c.id === sale.contactId);
+                return { ...sale, contact };
+            })
+            .filter(item => !!item.contact);
+    }, [transactions, contacts]);
+    
+    const handleToggleExpand = (contactId: string) => {
+        setExpandedClientId(prevId => (prevId === contactId ? null : contactId));
+    };
+
+    return (
+         <div className="space-y-3">
+            {topClients.length > 0 ? topClients.map((item, index) => (
+                <div key={item.contactId} className="bg-white p-3 rounded-lg shadow-sm dark:bg-slate-800">
+                    <button
+                        onClick={() => handleToggleExpand(item.contactId)}
+                        className="w-full flex items-center justify-between gap-2 text-left"
+                        aria-expanded={expandedClientId === item.contactId}
+                        aria-controls={`client-details-${item.contactId}`}
+                    >
+                        <div className="flex items-center gap-4">
+                            <span className="font-bold text-lg text-slate-400 dark:text-slate-500 w-8 text-center">#{index + 1}</span>
+                             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold dark:bg-green-900/50 dark:text-green-300 flex-shrink-0">
+                                {item.contact!.name.charAt(0).toUpperCase()}
+                            </div>
+                            <p className="font-semibold text-slate-800 dark:text-slate-100">{item.contact!.name}</p>
+                        </div>
+                        <div className="text-right flex items-center gap-3">
+                            <div>
+                                <p className="font-bold text-2xl text-green-600">{item.totalQuantity}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">comprados</p>
+                            </div>
+                             <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${expandedClientId === item.contactId ? 'rotate-180' : ''}`} />
+                        </div>
+                    </button>
+                    {expandedClientId === item.contactId && (
+                         <div id={`client-details-${item.contactId}`}>
+                            <ContactPurchaseHistory contactId={item.contactId} />
+                        </div>
+                    )}
+                </div>
+            )) : (
+                <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
+                    <p>No hay datos de ventas de clientes para mostrar.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 const SaleActionsModal: React.FC<{
     transaction: Transaction;
     onClose: () => void;
@@ -107,7 +251,7 @@ const SalesScreen: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
-    const [showFilters, setShowFilters] = useState(false);
+    const [isFilterAccordionOpen, setIsFilterAccordionOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<SalesTab>('history');
     const [saleForActions, setSaleForActions] = useState<Transaction | null>(null);
 
@@ -164,6 +308,18 @@ const SalesScreen: React.FC = () => {
             setTransactionToDelete(null);
         }
     };
+    
+    const resetFilters = () => {
+        setDateFrom('');
+        setDateTo('');
+        setPaymentMethodFilter('all');
+        setContactFilter('all');
+        setSortBy('date');
+        setSortOrder('desc');
+    };
+
+    const hasActiveFilters = dateFrom || dateTo || paymentMethodFilter !== 'all' || contactFilter !== 'all';
+    const isDefaultSort = sortBy === 'date' && sortOrder === 'desc';
 
     return (
         <div>
@@ -186,62 +342,84 @@ const SalesScreen: React.FC = () => {
                     <button onClick={() => setActiveTab('topProducts')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'topProducts' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
                         Top Productos
                     </button>
+                    <button onClick={() => setActiveTab('topClients')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'topClients' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+                        Top Clientes
+                    </button>
                 </div>
               </div>
 
               {activeTab === 'history' && (
                 <>
-                  <div className="mb-4">
-                       <button onClick={() => setShowFilters(!showFilters)} className="w-full text-left font-semibold text-blue-600 p-2 rounded-md bg-blue-50 hover:bg-blue-100 transition-colors dark:bg-blue-900/50 dark:hover:bg-blue-900">
-                          {showFilters ? 'Ocultar Filtros y Orden' : 'Mostrar Filtros y Orden'}
-                      </button>
-                      {showFilters && (
-                          <div className="bg-white p-4 rounded-b-lg shadow-sm dark:bg-slate-800">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 {/* Filtering */}
-                                  <div>
-                                      <label className="block text-sm font-medium">Desde</label>
-                                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium">Hasta</label>
-                                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium">Método de pago</label>
-                                      <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as 'all' | 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                          <option value="all">Todos</option>
-                                          <option value="Efectivo">Efectivo</option>
-                                          <option value="Crédito">Crédito</option>
-                                          <option value="Transferencia">Transferencia</option>
-                                      </select>
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium">Cliente</label>
-                                      <select value={contactFilter} onChange={e => setContactFilter(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                          <option value="all">Todos</option>
-                                          {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                      </select>
-                                  </div>
-                                  {/* Sorting */}
-                                  <div>
-                                      <label className="block text-sm font-medium">Ordenar por</label>
-                                      <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'amount')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                          <option value="date">Fecha</option>
-                                          <option value="amount">Monto</option>
-                                      </select>
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium">Orden</label>
-                                      <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                          <option value="desc">Descendente</option>
-                                          <option value="asc">Ascendente</option>
-                                      </select>
-                                  </div>
-                              </div>
-                          </div>
-                      )}
-                  </div>
+                    <div className="mb-4">
+                        <div className="bg-white rounded-lg shadow-sm dark:bg-slate-800">
+                            <button onClick={() => setIsFilterAccordionOpen(!isFilterAccordionOpen)} className="w-full flex justify-between items-center font-semibold text-slate-700 dark:text-slate-300 p-3" aria-expanded={isFilterAccordionOpen} aria-controls="filters-content">
+                                <div className="flex items-center gap-2">
+                                    <FilterIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                                    <span>Filtros y Ordenación</span>
+                                </div>
+                                <ChevronDownIcon className={`w-5 h-5 text-slate-500 transition-transform ${isFilterAccordionOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isFilterAccordionOpen && (
+                                <div id="filters-content" className="p-4 border-t dark:border-slate-700 mt-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium">Desde</label>
+                                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Hasta</label>
+                                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Método de pago</label>
+                                            <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as 'all' | 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="all">Todos</option>
+                                                <option value="Efectivo">Efectivo</option>
+                                                <option value="Crédito">Crédito</option>
+                                                <option value="Transferencia">Transferencia</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Cliente</label>
+                                            <select value={contactFilter} onChange={e => setContactFilter(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="all">Todos</option>
+                                                {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Ordenar por</label>
+                                            <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'amount')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="date">Fecha</option>
+                                                <option value="amount">Monto</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Orden</label>
+                                            <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="desc">Descendente</option>
+                                                <option value="asc">Ascendente</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex justify-end">
+                                        <button onClick={resetFilters} className="text-blue-600 hover:underline text-sm font-semibold">Limpiar Filtros</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    {!isFilterAccordionOpen && (hasActiveFilters || !isDefaultSort) && (
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Filtros activos:</span>
+                            {dateFrom && <span className="pill">Desde: {dateFrom}</span>}
+                            {dateTo && <span className="pill">Hasta: {dateTo}</span>}
+                            {paymentMethodFilter !== 'all' && <span className="pill">{paymentMethodFilter}</span>}
+                            {contactFilter !== 'all' && <span className="pill">{getContactName(contactFilter)}</span>}
+                            {!isDefaultSort && <span className="pill bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">Orden: {sortBy === 'date' ? 'Fecha' : 'Monto'} ({sortOrder === 'desc' ? 'Desc' : 'Asc'})</span>}
+                            <button onClick={resetFilters} className="text-blue-600 hover:underline text-xs ml-auto font-semibold">Limpiar</button>
+                        </div>
+                    )}
                   
                   <div className="space-y-3">
                       {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => (
@@ -271,6 +449,7 @@ const SalesScreen: React.FC = () => {
               )}
 
               {activeTab === 'topProducts' && <TopProductsView />}
+              {activeTab === 'topClients' && <TopClientsView />}
 
               {saleForActions && (
                 <SaleActionsModal
