@@ -72,6 +72,35 @@ const TopProductsView: React.FC = () => {
     );
 };
 
+const SaleActionsModal: React.FC<{
+    transaction: Transaction;
+    onClose: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+}> = ({ transaction, onClose, onEdit, onDelete }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col dark:bg-slate-800">
+            <div className="p-4 border-b dark:border-slate-700">
+                <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">Venta #{transaction.invoiceNumber}</h2>
+                <p className="text-sm text-center text-slate-500 dark:text-slate-400">Selecciona una acción</p>
+            </div>
+            <div className="p-4 space-y-3">
+                <button onClick={onEdit} className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600">
+                    <PencilIcon className="w-6 h-6 text-blue-500" />
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">Editar Venta</span>
+                </button>
+                <button onClick={onDelete} className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600">
+                    <TrashIcon className="w-6 h-6 text-red-500" />
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">Eliminar Venta</span>
+                </button>
+            </div>
+            <div className="flex justify-end gap-2 p-4 bg-slate-50 border-t rounded-b-lg dark:bg-slate-800/50 dark:border-slate-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md transition-colors dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-slate-100">Cancelar</button>
+            </div>
+        </div>
+    </div>
+);
+
 
 const SalesScreen: React.FC = () => {
     const { transactions, contacts, deleteTransaction } = useAppContext();
@@ -80,6 +109,7 @@ const SalesScreen: React.FC = () => {
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const [activeTab, setActiveTab] = useState<SalesTab>('history');
+    const [saleForActions, setSaleForActions] = useState<Transaction | null>(null);
 
     // Filter states
     const [dateFrom, setDateFrom] = useState('');
@@ -215,29 +245,21 @@ const SalesScreen: React.FC = () => {
                   
                   <div className="space-y-3">
                       {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => (
-                          <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm dark:bg-slate-800">
-                              <div className="flex justify-between items-start">
-                                 <div className="flex items-start gap-3 flex-1">
-                                    <div className="mt-1">{paymentMethodIcons[t.paymentMethod]}</div>
-                                    <div>
-                                        <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})} - <span className={`font-medium`}>{t.paymentMethod}</span></p>
-                                    </div>
-                                 </div>
-                                  <div className="text-right">
-                                      <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{formatCurrency(t.totalAmount)}</p>
-                                       <button onClick={() => setSelectedTransaction(t)} className="text-xs text-blue-500 hover:underline">Factura</button>
-                                  </div>
-                                  <div className="flex flex-col gap-2 ml-3 pl-3 border-l dark:border-slate-700">
-                                    <button onClick={() => setTransactionToEdit(t)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" aria-label={`Editar venta #${t.invoiceNumber}`}>
-                                        <PencilIcon className="w-5 h-5"/>
-                                    </button>
-                                    <button onClick={() => setTransactionToDelete(t)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors" aria-label={`Eliminar venta #${t.invoiceNumber}`}>
-                                        <TrashIcon className="w-5 h-5"/>
-                                    </button>
+                         <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center dark:bg-slate-800">
+                            <button onClick={() => setSaleForActions(t)} className="flex items-center gap-3 flex-1 text-left p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                <div className="mt-1">{paymentMethodIcons[t.paymentMethod]}</div>
+                                <div>
+                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})}</p>
+                                    <p className="font-bold text-lg text-slate-800 dark:text-slate-100 mt-1">{formatCurrency(t.totalAmount)}</p>
                                 </div>
-                              </div>
-                          </div>
+                            </button>
+                            <div className="ml-4 flex-shrink-0">
+                                <button onClick={() => setSelectedTransaction(t)} className="bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                                    Factura
+                                </button>
+                            </div>
+                        </div>
                       )) : (
                          <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
                              <p>No hay ventas que coincidan con tus filtros.</p>
@@ -250,6 +272,20 @@ const SalesScreen: React.FC = () => {
 
               {activeTab === 'topProducts' && <TopProductsView />}
 
+              {saleForActions && (
+                <SaleActionsModal
+                    transaction={saleForActions}
+                    onClose={() => setSaleForActions(null)}
+                    onEdit={() => {
+                        setTransactionToEdit(saleForActions);
+                        setSaleForActions(null);
+                    }}
+                    onDelete={() => {
+                        setTransactionToDelete(saleForActions);
+                        setSaleForActions(null);
+                    }}
+                />
+               )}
               {isAddModalOpen && <AddSaleModal onClose={() => setIsAddModalOpen(false)} />}
               {transactionToEdit && <AddSaleModal transactionToEdit={transactionToEdit} onClose={() => setTransactionToEdit(null)} />}
               {transactionToDelete && (

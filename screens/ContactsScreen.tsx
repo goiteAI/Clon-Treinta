@@ -77,10 +77,9 @@ const ContactPurchaseHistory: React.FC<{ contactId: string }> = ({ contactId }) 
 
 
 const ContactsScreen: React.FC = () => {
-    const { contacts, deleteContact } = useAppContext();
+    const { contacts } = useAppContext();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [contactToEdit, setContactToEdit] = useState<Contact | null>(null);
-    const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
     const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
 
     const handleOpenAddModal = () => {
@@ -91,13 +90,6 @@ const ContactsScreen: React.FC = () => {
     const handleOpenEditModal = (contact: Contact) => {
         setContactToEdit(contact);
         setIsModalOpen(true);
-    };
-
-    const handleDelete = () => {
-        if (contactToDelete) {
-            deleteContact(contactToDelete.id);
-            setContactToDelete(null);
-        }
     };
     
     const handleToggleExpand = (contactId: string) => {
@@ -112,35 +104,40 @@ const ContactsScreen: React.FC = () => {
             <div className="p-4 space-y-3">
                 {contacts.map(c => (
                     <div key={c.id} className="bg-white p-3 rounded-lg shadow-sm dark:bg-slate-800">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold dark:bg-green-900/50 dark:text-green-300">
+                        <div className="flex items-center justify-between gap-2">
+                             <button
+                                onClick={() => handleToggleExpand(c.id)}
+                                className="flex flex-1 items-center gap-4 text-left p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                aria-expanded={expandedContactId === c.id}
+                                aria-controls={`contact-details-${c.id}`}
+                            >
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold dark:bg-green-900/50 dark:text-green-300 flex-shrink-0">
                                     {c.name.charAt(0).toUpperCase()}
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <p className="font-semibold text-slate-800 dark:text-slate-100">{c.name}</p>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">{c.phone}</p>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className={`h-5 w-5 transition-transform text-slate-400 ${expandedContactId === c.id ? 'rotate-180' : ''}`}
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            <div className="flex items-center">
                                 <button onClick={() => handleOpenEditModal(c)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 p-2 rounded-full transition-colors" aria-label={`Editar ${c.name}`}>
                                    <PencilIcon className="w-5 h-5"/>
                                 </button>
-                                 <button onClick={() => setContactToDelete(c)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 p-2 rounded-full transition-colors" aria-label={`Eliminar ${c.name}`}>
-                                   <TrashIcon className="w-5 h-5"/>
-                                </button>
-                                <button onClick={() => handleToggleExpand(c.id)} className="p-2 rounded-full transition-colors text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label={`Ver detalles de ${c.name}`}>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className={`h-5 w-5 transition-transform ${expandedContactId === c.id ? 'rotate-180' : ''}`}
-                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
                             </div>
                         </div>
-                        {expandedContactId === c.id && <ContactPurchaseHistory contactId={c.id} />}
+                        {expandedContactId === c.id && (
+                             <div id={`contact-details-${c.id}`}>
+                                <ContactPurchaseHistory contactId={c.id} />
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -154,15 +151,6 @@ const ContactsScreen: React.FC = () => {
                 </svg>
             </button>
             {isModalOpen && <AddContactModal contactToEdit={contactToEdit} onClose={() => setIsModalOpen(false)} />}
-            {contactToDelete && (
-                <ConfirmationModal
-                    isOpen={!!contactToDelete}
-                    onClose={() => setContactToDelete(null)}
-                    onConfirm={handleDelete}
-                    title="Confirmar Eliminación"
-                    message={`¿Estás seguro de que quieres eliminar al contacto "${contactToDelete.name}"? Esta acción no se puede deshacer.`}
-                />
-            )}
         </div>
     );
 };
