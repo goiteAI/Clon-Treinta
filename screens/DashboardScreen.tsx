@@ -90,23 +90,45 @@ const DashboardScreen: React.FC = () => {
     };
   }, [transactions, expenses, timePeriod]);
 
-  const PIE_COLORS = ['#16a34a', '#22c55e', '#4ade80', '#86efac'];
+  const PAYMENT_METHOD_COLORS: { [key: string]: string } = {
+    'Efectivo': '#f59e0b',    // amber-500
+    'Crédito': '#22c55e',     // green-500
+    'Transferencia': '#3b82f6', // blue-500
+  };
+  const FALLBACK_COLOR = '#6b7280'; // gray-500
 
   const pieData = useMemo(() => {
     return Object.entries(balanceData.salesByPaymentMethod).map(([name, value]) => ({ name, value }));
   }, [balanceData.salesByPaymentMethod]);
   
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent < 0.05) return null; // Don't render label for small slices
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const renderCustomizedLabelWithLines = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, fill, payload, value, percent } = props;
+    
+    // Don't render label if the slice is too small to avoid clutter
+    if (percent < 0.05) return null;
+
+    const RADIAN = Math.PI / 180;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 5) * cos;
+    const sy = cy + (outerRadius + 5) * sin;
+    const mx = cx + (outerRadius + 20) * cos;
+    const my = cy + (outerRadius + 20) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 15;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
-            {`${(percent * 100).toFixed(0)}%`}
+      <g>
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+        <circle cx={sx} cy={sy} r={2} fill={fill} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 4} y={ey} textAnchor={textAnchor} fill="currentColor" className="text-sm text-slate-700 dark:text-slate-300">
+          {payload.name}
         </text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 4} y={ey} dy={16} textAnchor={textAnchor} fill="currentColor" className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+          {formatCurrency(value)}
+        </text>
+      </g>
     );
   };
 
@@ -150,7 +172,7 @@ const DashboardScreen: React.FC = () => {
                 {/* Right Side: Chart */}
                 {pieData.length > 0 ? (
                     <div className="flex flex-col items-center justify-center w-full h-auto">
-                        <div className="relative w-full max-w-[250px] h-52">
+                        <div className="relative w-full max-w-[350px] h-72">
                              <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -159,16 +181,16 @@ const DashboardScreen: React.FC = () => {
                                         nameKey="name"
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius="60%"
-                                        outerRadius="80%"
+                                        innerRadius="50%"
+                                        outerRadius="70%"
                                         fill="#8884d8"
                                         paddingAngle={5}
                                         cornerRadius={5}
                                         labelLine={false}
-                                        label={renderCustomizedLabel}
+                                        label={renderCustomizedLabelWithLines}
                                     >
                                         {pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} className="focus:outline-none" />
+                                            <Cell key={`cell-${index}`} fill={PAYMENT_METHOD_COLORS[entry.name] || FALLBACK_COLOR} className="focus:outline-none" />
                                         ))}
                                     </Pie>
                                 </PieChart>
@@ -177,18 +199,6 @@ const DashboardScreen: React.FC = () => {
                                 <p className="text-sm text-slate-500 dark:text-slate-400">Total</p>
                                 <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{formatCurrency(balanceData.totalSales)}</p>
                             </div>
-                        </div>
-                        <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                            {pieData.map((entry, index) => (
-                                <div key={`legend-${index}`} className="flex items-center text-sm">
-                                    <span 
-                                        className="w-3 h-3 rounded-full mr-2" 
-                                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
-                                    ></span>
-                                    <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
-                                    <span className="font-semibold ml-1 text-slate-800 dark:text-slate-200">{formatCurrency(entry.value)}</span>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 ) : (
