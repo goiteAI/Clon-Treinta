@@ -118,10 +118,10 @@ const DashboardScreen: React.FC = () => {
               ))}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
                 {/* Left Side: Stats */}
                 <div className="space-y-4">
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <StatCard title={balanceData.cardTitlePrefix} value={formatCurrency(balanceData.totalSales)} color="text-green-600" />
                         <StatCard title="Gastos" value={formatCurrency(balanceData.totalExpenses)} color="text-red-600" />
                         <StatCard title="Utilidad" value={formatCurrency(balanceData.profit)} color={balanceData.profit >= 0 ? 'text-blue-600' : 'text-red-600'} />

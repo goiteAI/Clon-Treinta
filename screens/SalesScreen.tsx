@@ -19,12 +19,67 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
+type SalesTab = 'history' | 'topProducts';
+
+const TopProductsView: React.FC = () => {
+    const { transactions, products } = useAppContext();
+    const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+    const topProducts = useMemo(() => {
+        const productSales = new Map<string, { productId: string; quantity: number }>();
+
+        transactions.forEach(transaction => {
+            transaction.items.forEach(item => {
+                const existing = productSales.get(item.productId);
+                if (existing) {
+                    productSales.set(item.productId, { ...existing, quantity: existing.quantity + item.quantity });
+                } else {
+                    productSales.set(item.productId, { productId: item.productId, quantity: item.quantity });
+                }
+            });
+        });
+
+        return Array.from(productSales.values())
+            .sort((a, b) => b.quantity - a.quantity)
+            .map(sale => {
+                const product = products.find(p => p.id === sale.productId);
+                return { ...sale, product };
+            })
+            .filter(item => !!item.product); // Filter out items where product is not found
+    }, [transactions, products]);
+
+    return (
+        <div className="space-y-3">
+            {topProducts.length > 0 ? topProducts.map((item, index) => (
+                <div key={item.productId} className="bg-white p-3 rounded-lg shadow-sm flex items-center gap-4 dark:bg-slate-800">
+                    <span className="font-bold text-lg text-slate-400 dark:text-slate-500 w-8 text-center">#{index + 1}</span>
+                    <img src={item.product!.imageUrl} alt={item.product!.name} className="w-16 h-16 rounded-md object-cover bg-slate-100"/>
+                    <div className="flex-1">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{item.product!.name}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(item.product!.price)}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="font-bold text-2xl text-green-600">{item.quantity}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">vendidos</p>
+                    </div>
+                </div>
+            )) : (
+                <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
+                    <p>No hay datos de ventas para mostrar.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 const SalesScreen: React.FC = () => {
     const { transactions, contacts, deleteTransaction } = useAppContext();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
     const [showFilters, setShowFilters] = useState(false);
+    const [activeTab, setActiveTab] = useState<SalesTab>('history');
 
     // Filter states
     const [dateFrom, setDateFrom] = useState('');
@@ -93,90 +148,107 @@ const SalesScreen: React.FC = () => {
             </header>
             
             <div className="p-4">
-              <div className="mb-4">
-                   <button onClick={() => setShowFilters(!showFilters)} className="w-full text-left font-semibold text-blue-600 p-2 rounded-md bg-blue-50 hover:bg-blue-100 transition-colors dark:bg-blue-900/50 dark:hover:bg-blue-900">
-                      {showFilters ? 'Ocultar Filtros y Orden' : 'Mostrar Filtros y Orden'}
-                  </button>
-                  {showFilters && (
-                      <div className="bg-white p-4 rounded-b-lg shadow-sm dark:bg-slate-800">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             {/* Filtering */}
-                              <div>
-                                  <label className="block text-sm font-medium">Desde</label>
-                                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-medium">Hasta</label>
-                                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-medium">Método de pago</label>
-                                  <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as 'all' | 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                      <option value="all">Todos</option>
-                                      <option value="Efectivo">Efectivo</option>
-                                      <option value="Crédito">Crédito</option>
-                                      <option value="Transferencia">Transferencia</option>
-                                  </select>
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-medium">Cliente</label>
-                                  <select value={contactFilter} onChange={e => setContactFilter(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                      <option value="all">Todos</option>
-                                      {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                  </select>
-                              </div>
-                              {/* Sorting */}
-                              <div>
-                                  <label className="block text-sm font-medium">Ordenar por</label>
-                                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'amount')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                      <option value="date">Fecha</option>
-                                      <option value="amount">Monto</option>
-                                  </select>
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-medium">Orden</label>
-                                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                      <option value="desc">Descendente</option>
-                                      <option value="asc">Ascendente</option>
-                                  </select>
+              <div className="border-b mb-4 dark:border-slate-700">
+                <div className="flex -mb-px">
+                    <button onClick={() => setActiveTab('history')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'history' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+                        Historial
+                    </button>
+                    <button onClick={() => setActiveTab('topProducts')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'topProducts' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+                        Top Productos
+                    </button>
+                </div>
+              </div>
+
+              {activeTab === 'history' && (
+                <>
+                  <div className="mb-4">
+                       <button onClick={() => setShowFilters(!showFilters)} className="w-full text-left font-semibold text-blue-600 p-2 rounded-md bg-blue-50 hover:bg-blue-100 transition-colors dark:bg-blue-900/50 dark:hover:bg-blue-900">
+                          {showFilters ? 'Ocultar Filtros y Orden' : 'Mostrar Filtros y Orden'}
+                      </button>
+                      {showFilters && (
+                          <div className="bg-white p-4 rounded-b-lg shadow-sm dark:bg-slate-800">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 {/* Filtering */}
+                                  <div>
+                                      <label className="block text-sm font-medium">Desde</label>
+                                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium">Hasta</label>
+                                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium">Método de pago</label>
+                                      <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value as 'all' | 'Efectivo' | 'Crédito' | 'Transferencia')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                          <option value="all">Todos</option>
+                                          <option value="Efectivo">Efectivo</option>
+                                          <option value="Crédito">Crédito</option>
+                                          <option value="Transferencia">Transferencia</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium">Cliente</label>
+                                      <select value={contactFilter} onChange={e => setContactFilter(e.target.value)} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                          <option value="all">Todos</option>
+                                          {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                      </select>
+                                  </div>
+                                  {/* Sorting */}
+                                  <div>
+                                      <label className="block text-sm font-medium">Ordenar por</label>
+                                      <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'amount')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                          <option value="date">Fecha</option>
+                                          <option value="amount">Monto</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium">Orden</label>
+                                      <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')} className="w-full p-1 border rounded focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                          <option value="desc">Descendente</option>
+                                          <option value="asc">Ascendente</option>
+                                      </select>
+                                  </div>
                               </div>
                           </div>
-                      </div>
-                  )}
-              </div>
-              
-              <div className="space-y-3">
-                  {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => (
-                      <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm dark:bg-slate-800">
-                          <div className="flex justify-between items-start">
-                             <div className="flex items-start gap-3 flex-1">
-                                <div className="mt-1">{paymentMethodIcons[t.paymentMethod]}</div>
-                                <div>
-                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})} - <span className={`font-medium`}>{t.paymentMethod}</span></p>
+                      )}
+                  </div>
+                  
+                  <div className="space-y-3">
+                      {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => (
+                          <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm dark:bg-slate-800">
+                              <div className="flex justify-between items-start">
+                                 <div className="flex items-start gap-3 flex-1">
+                                    <div className="mt-1">{paymentMethodIcons[t.paymentMethod]}</div>
+                                    <div>
+                                        <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})} - <span className={`font-medium`}>{t.paymentMethod}</span></p>
+                                    </div>
+                                 </div>
+                                  <div className="text-right">
+                                      <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{formatCurrency(t.totalAmount)}</p>
+                                       <button onClick={() => setSelectedTransaction(t)} className="text-xs text-blue-500 hover:underline">Factura</button>
+                                  </div>
+                                  <div className="flex flex-col gap-2 ml-3 pl-3 border-l dark:border-slate-700">
+                                    <button onClick={() => setTransactionToEdit(t)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" aria-label={`Editar venta #${t.invoiceNumber}`}>
+                                        <PencilIcon className="w-5 h-5"/>
+                                    </button>
+                                    <button onClick={() => setTransactionToDelete(t)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors" aria-label={`Eliminar venta #${t.invoiceNumber}`}>
+                                        <TrashIcon className="w-5 h-5"/>
+                                    </button>
                                 </div>
-                             </div>
-                              <div className="text-right">
-                                  <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{formatCurrency(t.totalAmount)}</p>
-                                   <button onClick={() => setSelectedTransaction(t)} className="text-xs text-blue-500 hover:underline">Factura</button>
                               </div>
-                              <div className="flex flex-col gap-2 ml-3 pl-3 border-l dark:border-slate-700">
-                                <button onClick={() => setTransactionToEdit(t)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" aria-label={`Editar venta #${t.invoiceNumber}`}>
-                                    <PencilIcon className="w-5 h-5"/>
-                                </button>
-                                <button onClick={() => setTransactionToDelete(t)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors" aria-label={`Eliminar venta #${t.invoiceNumber}`}>
-                                    <TrashIcon className="w-5 h-5"/>
-                                </button>
-                            </div>
                           </div>
-                      </div>
-                  )) : (
-                     <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
-                         <p>No hay ventas que coincidan con tus filtros.</p>
-                         <p className="text-sm">Intenta ajustar el rango de fechas o los filtros.</p>
-                     </div>
-                  )}
-              </div>
+                      )) : (
+                         <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
+                             <p>No hay ventas que coincidan con tus filtros.</p>
+                             <p className="text-sm">Intenta ajustar el rango de fechas o los filtros.</p>
+                         </div>
+                      )}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'topProducts' && <TopProductsView />}
 
               {isAddModalOpen && <AddSaleModal onClose={() => setIsAddModalOpen(false)} />}
               {transactionToEdit && <AddSaleModal transactionToEdit={transactionToEdit} onClose={() => setTransactionToEdit(null)} />}
