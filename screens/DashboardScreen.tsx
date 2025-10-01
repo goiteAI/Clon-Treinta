@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import AddSaleModal from '../components/AddSaleModal';
-import { PieChart, Pie, Cell, ResponsiveContainer, LabelList } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -21,7 +21,7 @@ const SubStat: React.FC<{ title: string; value: string; color?: string }> = ({ t
 
 
 const DashboardScreen: React.FC = () => {
-  const { transactions, expenses, theme } = useAppContext();
+  const { transactions, expenses } = useAppContext();
   const [isAddSaleModalOpen, setIsAddSaleModalOpen] = useState(false);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
 
@@ -90,17 +90,25 @@ const DashboardScreen: React.FC = () => {
     };
   }, [transactions, expenses, timePeriod]);
 
-  const PIE_COLORS = ['#16a34a', '#22c55e', '#4ade80']; // green-700, green-600, green-500
+  const PIE_COLORS = ['#16a34a', '#22c55e', '#4ade80', '#86efac'];
 
-  const pieDataWithPercent = useMemo(() => {
-    const rawData = Object.entries(balanceData.salesByPaymentMethod).map(([name, value]) => ({ name, value: value as number }));
-    const totalValue = rawData.reduce((sum, entry) => sum + entry.value, 0);
-    if (totalValue === 0) return [];
-    return rawData.map(entry => ({
-      ...entry,
-      percent: entry.value / totalValue,
-    }));
+  const pieData = useMemo(() => {
+    return Object.entries(balanceData.salesByPaymentMethod).map(([name, value]) => ({ name, value }));
   }, [balanceData.salesByPaymentMethod]);
+  
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.05) return null; // Don't render label for small slices
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
+  };
 
 
   return (
@@ -140,42 +148,47 @@ const DashboardScreen: React.FC = () => {
                 </div>
 
                 {/* Right Side: Chart */}
-                {pieDataWithPercent.length > 0 ? (
-                    <div className="relative" style={{ width: '100%', height: 250 }}>
-                        <ResponsiveContainer>
-                            <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
-                                <Pie
-                                    data={pieDataWithPercent}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius="65%"
-                                    outerRadius="85%"
-                                    fill="#8884d8"
-                                    paddingAngle={5}
-                                    cornerRadius={8}
-                                    labelLine={{ stroke: theme === 'dark' ? '#94a3b8' : '#64748b' }}
-                                    label={({ name }) => name}
-                                >
-                                    {pieDataWithPercent.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} className="focus:outline-none" />
-                                    ))}
-                                    <LabelList
-                                        dataKey="percent"
-                                        position="inside"
-                                        formatter={(value) => value > 0.05 ? `${Math.round(value * 100)}%` : ''}
-                                        className="font-bold fill-white text-base"
-                                        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                                    />
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Total Ventas</p>
-                            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                                {formatCurrency(balanceData.totalSales)}
-                            </p>
+                {pieData.length > 0 ? (
+                    <div className="flex flex-col items-center justify-center w-full h-auto">
+                        <div className="relative w-full max-w-[250px] h-52">
+                             <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius="60%"
+                                        outerRadius="80%"
+                                        fill="#8884d8"
+                                        paddingAngle={5}
+                                        cornerRadius={5}
+                                        labelLine={false}
+                                        label={renderCustomizedLabel}
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} className="focus:outline-none" />
+                                        ))}
+                                    </Pie>
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Total</p>
+                                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{formatCurrency(balanceData.totalSales)}</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
+                            {pieData.map((entry, index) => (
+                                <div key={`legend-${index}`} className="flex items-center text-sm">
+                                    <span 
+                                        className="w-3 h-3 rounded-full mr-2" 
+                                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                                    ></span>
+                                    <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
+                                    <span className="font-semibold ml-1 text-slate-800 dark:text-slate-200">{formatCurrency(entry.value)}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 ) : (
