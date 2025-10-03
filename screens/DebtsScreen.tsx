@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import type { Transaction } from '../types';
 
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -13,6 +14,16 @@ const DebtsScreen: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentError, setPaymentError] = useState<string>('');
     const [editingPaymentInfo, setEditingPaymentInfo] = useState<{ transactionId: string; paymentIndex: number; amount: number } | null>(null);
+    const [notification, setNotification] = useState<{ type: 'success' | 'paid'; message: string } | null>(null);
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const debts = useMemo(() => {
         return transactions
@@ -34,8 +45,10 @@ const DebtsScreen: React.FC = () => {
         }, 0);
     }, [debts]);
     
-    const handleSavePayment = (transactionId: string, amountDue: number) => {
+    const handleSavePayment = (transaction: Transaction) => {
         setPaymentError('');
+        const totalPaid = transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        const amountDue = transaction.totalAmount - totalPaid;
 
         if (paymentAmount <= 0) {
             setPaymentError('El monto del abono debe ser mayor a cero.');
@@ -45,7 +58,16 @@ const DebtsScreen: React.FC = () => {
             setPaymentError(`El monto no puede superar el saldo pendiente de ${formatCurrency(amountDue)}.`);
             return;
         }
-        addPayment(transactionId, paymentAmount);
+        
+        addPayment(transaction.id, paymentAmount);
+
+        const newTotalPaid = totalPaid + paymentAmount;
+        if (newTotalPaid >= transaction.totalAmount) {
+            setNotification({ type: 'paid', message: '¡Deuda completada! El cliente ha saldado su cuenta.' });
+        } else {
+            setNotification({ type: 'success', message: 'Abono registrado con éxito.' });
+        }
+
         setAddingPaymentTo(null); // Close the form on success
         setPaymentAmount(0);
     };
@@ -192,7 +214,7 @@ const DebtsScreen: React.FC = () => {
                                                     max={amountDue}
                                                 />
                                                 <button
-                                                    onClick={() => handleSavePayment(t.id, amountDue)}
+                                                    onClick={() => handleSavePayment(t)}
                                                     className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors"
                                                 >
                                                     Guardar
@@ -231,6 +253,15 @@ const DebtsScreen: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {notification && (
+                <div 
+                    className={`fixed bottom-20 left-1/2 -translate-x-1/2 p-4 rounded-lg shadow-lg text-white font-semibold z-50 animate-fade-in-out
+                        ${notification.type === 'paid' ? 'bg-blue-500' : 'bg-green-500'}`}
+                >
+                    <p>{notification.message}</p>
+                </div>
+            )}
         </div>
     );
 };

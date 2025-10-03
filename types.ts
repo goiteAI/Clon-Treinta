@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
 
+export interface StockHistoryEntry {
+  date: string; // ISO string
+  change: number; // Positivo para entradas, negativo para salidas
+  reason: 'initial' | 'adjustment' | 'sale' | 'sale_update' | 'sale_delete';
+  transactionId?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -7,6 +14,7 @@ export interface Product {
   cost: number;
   stock: number;
   imageUrl: string;
+  stockHistory: StockHistoryEntry[];
 }
 
 export interface TransactionItem {
@@ -64,7 +72,7 @@ export interface AppContextType {
   contacts: Contact[];
   companyInfo: CompanyInfo;
   resetData: () => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'stockHistory'>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;

@@ -422,23 +422,37 @@ const SalesScreen: React.FC = () => {
                     )}
                   
                   <div className="space-y-3">
-                      {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => (
-                         <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center dark:bg-slate-800">
-                            <button onClick={() => setSaleForActions(t)} className="flex items-center gap-3 flex-1 text-left p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                <div className="mt-1">{paymentMethodIcons[t.paymentMethod]}</div>
-                                <div>
-                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})}</p>
-                                    <p className="font-bold text-lg text-slate-800 dark:text-slate-100 mt-1">{formatCurrency(t.totalAmount)}</p>
-                                </div>
-                            </button>
-                            <div className="ml-4 flex-shrink-0">
-                                <button onClick={() => setSelectedTransaction(t)} className="bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition-colors">
-                                    Factura
+                      {filteredAndSortedTransactions.length > 0 ? filteredAndSortedTransactions.map(t => {
+                         const isCreditPaid = t.paymentMethod === 'Crédito' && (t.payments?.reduce((sum, p) => sum + p.amount, 0) || 0) >= t.totalAmount;
+                         return (
+                             <div key={t.id} className="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center dark:bg-slate-800">
+                                <button onClick={() => setSaleForActions(t)} className="flex items-center gap-3 flex-1 text-left p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                    <div className="mt-1">
+                                        {isCreditPaid ? (
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                {paymentMethodIcons[t.paymentMethod]}
+                                                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                                    Pagado
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            paymentMethodIcons[t.paymentMethod]
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-800 dark:text-slate-100">{getContactName(t.contactId)}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Factura #{t.invoiceNumber} - {new Date(t.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric'})}</p>
+                                        <p className="font-bold text-lg text-slate-800 dark:text-slate-100 mt-1">{formatCurrency(t.totalAmount)}</p>
+                                    </div>
                                 </button>
+                                <div className="ml-4 flex-shrink-0">
+                                    <button onClick={() => setSelectedTransaction(t)} className="bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                                        Factura
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                      )) : (
+                         );
+                      }) : (
                          <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
                              <p>No hay ventas que coincidan con tus filtros.</p>
                              <p className="text-sm">Intenta ajustar el rango de fechas o los filtros.</p>

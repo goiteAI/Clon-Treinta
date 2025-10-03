@@ -11,11 +11,11 @@ import type {
 
 // Initial Data for demonstration (used only if localStorage is empty)
 const initialProducts: Product[] = [
-  { id: 'prod1', name: 'Coca-Cola 350ml', price: 2500, cost: 1500, stock: 100, imageUrl: 'https://picsum.photos/id/10/200' },
-  { id: 'prod2', name: 'Papas Margarita Pollo', price: 2000, cost: 1200, stock: 80, imageUrl: 'https://picsum.photos/id/20/200' },
-  { id: 'prod3', name: 'Chocoramo', price: 1800, cost: 1000, stock: 120, imageUrl: 'https://picsum.photos/id/30/200' },
-  { id: 'prod4', name: 'Jumbo Jet', price: 3000, cost: 1800, stock: 50, imageUrl: 'https://picsum.photos/id/40/200' },
-  { id: 'prod5', name: 'Agua Cristal 600ml', price: 1500, cost: 800, stock: 200, imageUrl: 'https://picsum.photos/id/50/200' },
+  { id: 'prod1', name: 'Coca-Cola 350ml', price: 2500, cost: 1500, stock: 100, imageUrl: 'https://picsum.photos/id/10/200', stockHistory: [{ date: new Date().toISOString(), change: 100, reason: 'initial'}] },
+  { id: 'prod2', name: 'Papas Margarita Pollo', price: 2000, cost: 1200, stock: 80, imageUrl: 'https://picsum.photos/id/20/200', stockHistory: [{ date: new Date().toISOString(), change: 80, reason: 'initial'}] },
+  { id: 'prod3', name: 'Chocoramo', price: 1800, cost: 1000, stock: 120, imageUrl: 'https://picsum.photos/id/30/200', stockHistory: [{ date: new Date().toISOString(), change: 120, reason: 'initial'}] },
+  { id: 'prod4', name: 'Jumbo Jet', price: 3000, cost: 1800, stock: 50, imageUrl: 'https://picsum.photos/id/40/200', stockHistory: [{ date: new Date().toISOString(), change: 50, reason: 'initial'}] },
+  { id: 'prod5', name: 'Agua Cristal 600ml', price: 1500, cost: 800, stock: 200, imageUrl: 'https://picsum.photos/id/50/200', stockHistory: [{ date: new Date().toISOString(), change: 200, reason: 'initial'}] },
 ];
 
 const initialContacts: Contact[] = [
@@ -135,8 +135,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const addProduct = async (product: Omit<Product, 'id'>) => {
-    const newProduct = { ...product, id: `prod_${Date.now()}` };
+  const addProduct = async (product: Omit<Product, 'id' | 'stockHistory'>) => {
+    const newProduct: Product = { 
+        ...product, 
+        id: `prod_${Date.now()}`, 
+        stockHistory: [{ date: new Date().toISOString(), change: product.stock, reason: 'initial'}] 
+    };
     setProducts(prev => [...prev, newProduct]);
   };
 
@@ -166,10 +170,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const newTransaction = { ...transaction, id: `trans_${Date.now()}`, invoiceNumber: newInvoiceNumber };
     setTransactions(prev => [newTransaction, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
-    // Update stock
+    // Update stock and stock history
     const updatedProducts = products.map(p => {
         const item = transaction.items.find(i => i.productId === p.id);
-        if (item) return { ...p, stock: p.stock - item.quantity };
+        if (item) {
+            const newHistoryEntry = {
+                date: newTransaction.date,
+                change: -item.quantity,
+                reason: 'sale' as const,
+                transactionId: newTransaction.id
+            };
+            return { 
+                ...p, 
+                stock: p.stock - item.quantity,
+                stockHistory: [...p.stockHistory, newHistoryEntry]
+            };
+        }
         return p;
     });
     setProducts(updatedProducts);
@@ -224,7 +240,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
   
   const updateProductStock = async (productId: string, newStock: number) => {
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
+    setProducts(prev => prev.map(p => {
+        if (p.id === productId) {
+            const stockChange = newStock - p.stock;
+            if (stockChange !== 0) {
+                const newHistoryEntry = {
+                    date: new Date().toISOString(),
+                    change: stockChange,
+                    reason: 'adjustment' as const
+                };
+                return { ...p, stock: newStock, stockHistory: [...p.stockHistory, newHistoryEntry] };
+            }
+        }
+        return p;
+    }));
   };
 
   const updateProduct = async (product: Product) => {
@@ -241,22 +270,34 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     if (!oldTransaction) return;
 
     const productMap = new Map(products.map(p => [p.id, { ...p }]));
+    
+    // Calculate net stock change for each product
+    const stockChanges = new Map<string, number>();
 
-    // Revert stock from the old transaction
+    // Add back old quantities
     for (const item of oldTransaction.items) {
-      const product = productMap.get(item.productId);
-      if (product) {
-        product.stock += item.quantity;
-      }
+      stockChanges.set(item.productId, (stockChanges.get(item.productId) || 0) + item.quantity);
     }
-
-    // Apply stock changes for the new transaction
+    // Subtract new quantities
     for (const item of transaction.items) {
-      const product = productMap.get(item.productId);
-      if (product) {
-        product.stock -= item.quantity;
-      }
+      stockChanges.set(item.productId, (stockChanges.get(item.productId) || 0) - item.quantity);
     }
+    
+    // Apply net changes to products and add history
+    stockChanges.forEach((change, productId) => {
+        const product = productMap.get(productId);
+        if (product && change !== 0) {
+            product.stock += change;
+            const newHistoryEntry = {
+                date: transaction.date,
+                change: -change, // History logs the sale action, so we reverse the sign of the stock restoration
+                reason: 'sale_update' as const,
+                transactionId: transaction.id
+            };
+            product.stockHistory = [...product.stockHistory, newHistoryEntry];
+            productMap.set(productId, product);
+        }
+    });
 
     setProducts(Array.from(productMap.values()));
     setTransactions(prev => prev.map(t => t.id === transaction.id ? transaction : t).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -266,11 +307,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const transactionToDelete = transactions.find(t => t.id === transactionId);
     if (!transactionToDelete) return;
 
-    // Restore stock
+    // Restore stock and add history
     const updatedProducts = products.map(p => {
         const item = transactionToDelete.items.find(i => i.productId === p.id);
         if (item) {
-            return { ...p, stock: p.stock + item.quantity };
+            const newHistoryEntry = {
+                date: new Date().toISOString(),
+                change: item.quantity,
+                reason: 'sale_delete' as const,
+                transactionId: transactionToDelete.id
+            };
+            return { 
+                ...p, 
+                stock: p.stock + item.quantity,
+                stockHistory: [...p.stockHistory, newHistoryEntry]
+            };
         }
         return p;
     });
