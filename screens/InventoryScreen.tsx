@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'recharts';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Product, StockHistoryEntry } from '../types';
 import EditStockModal from '../components/EditStockModal';
@@ -67,7 +67,7 @@ const ProductModal: React.FC<{ onClose: () => void; productToEdit?: Product | nu
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Vista previa" className="w-full h-full object-cover" />
                                 ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 )}
@@ -101,6 +101,12 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+);
+
 
 // --- DASHBOARD DE INVENTARIO ---
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
@@ -119,6 +125,17 @@ const InventoryDashboard: React.FC = () => {
     const formatCurrency = (amount: number) => {
         return amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     };
+
+    const reasonToText = (reason: StockHistoryEntry['reason']) => {
+        const map = {
+            'initial': 'Stock Inicial',
+            'adjustment': 'Ajuste Manual',
+            'sale': 'Venta',
+            'sale_update': 'Venta Editada',
+            'sale_delete': 'Venta Anulada',
+        };
+        return map[reason] || 'Desconocido';
+    }
 
     const analyticsData = useMemo(() => {
         const now = new Date();
@@ -165,16 +182,6 @@ const InventoryDashboard: React.FC = () => {
         };
     }, [products, timePeriod]);
     
-    const reasonToText = (reason: StockHistoryEntry['reason']) => {
-        const map = {
-            'initial': 'Stock Inicial',
-            'adjustment': 'Ajuste Manual',
-            'sale': 'Venta',
-            'sale_update': 'Venta Editada',
-            'sale_delete': 'Venta Anulada',
-        };
-        return map[reason] || 'Desconocido';
-    }
 
     return (
         <div className="space-y-6">
@@ -215,14 +222,18 @@ const InventoryDashboard: React.FC = () => {
                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-2">Historial de Movimientos Recientes</h3>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                     {analyticsData.recentMovements.length > 0 ? analyticsData.recentMovements.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                            <div>
-                                <p className="font-semibold text-slate-800 dark:text-slate-200">{item.product.name}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.date).toLocaleString('es-ES')} - {reasonToText(item.reason)}</p>
+                        <div key={index} className="flex items-center gap-4 text-sm p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <img src={item.product.imageUrl} alt={item.product.name} className="w-12 h-12 rounded-md object-cover bg-slate-100 flex-shrink-0"/>
+                            <div className="flex-1">
+                                <p className="font-semibold text-slate-800 dark:text-slate-100">{item.product.name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{reasonToText(item.reason)}</p>
                             </div>
-                            <span className={`font-bold text-lg ${item.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {item.change > 0 ? '+' : ''}{item.change}
-                            </span>
+                            <div className="text-right">
+                                <p className={`font-bold text-lg ${item.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {item.change > 0 ? '+' : ''}{item.change}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            </div>
                         </div>
                     )) : <p className="text-center text-slate-500 py-4">No hay movimientos registrados.</p>}
                 </div>
@@ -240,6 +251,7 @@ const InventoryScreen: React.FC = () => {
     const [stockEditingProduct, setStockEditingProduct] = useState<Product | null>(null);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [activeTab, setActiveTab] = useState<'list' | 'dashboard'>('list');
+    const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
@@ -259,6 +271,26 @@ const InventoryScreen: React.FC = () => {
             setProductToDelete(null);
         }
     };
+    
+    const handleToggleExpand = (productId: string) => {
+        setExpandedProductId(prevId => (prevId === productId ? null : productId));
+    };
+
+    const handleActionClick = (e: React.MouseEvent | React.KeyboardEvent, action: () => void) => {
+        e.stopPropagation();
+        action();
+    };
+    
+    const reasonToText = (reason: StockHistoryEntry['reason']) => {
+        const map = {
+            'initial': 'Stock Inicial',
+            'adjustment': 'Ajuste Manual',
+            'sale': 'Venta',
+            'sale_update': 'Venta Editada',
+            'sale_delete': 'Venta Anulada',
+        };
+        return map[reason] || 'Desconocido';
+    }
 
 
     return (
@@ -281,33 +313,94 @@ const InventoryScreen: React.FC = () => {
 
                 {activeTab === 'list' && (
                     <div className="space-y-3">
-                        {products.map(p => (
-                            <div key={p.id} className="bg-white p-3 rounded-lg shadow-sm flex items-center gap-4 dark:bg-slate-800">
-                                <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-md object-cover bg-slate-100"/>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(p.price)}</p>
-                                </div>
-                                <div className="flex items-center gap-3">
+                        {products.map(p => {
+                            const isExpanded = expandedProductId === p.id;
+                            
+                            const sortedHistory = [...p.stockHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            let runningStock = 0;
+                            const historyWithStock = sortedHistory.map(entry => {
+                                runningStock += entry.change;
+                                return { ...entry, resultingStock: runningStock };
+                            }).reverse();
+
+                            return (
+                                <div key={p.id} className="bg-white rounded-lg shadow-sm dark:bg-slate-800 transition-all duration-300">
                                     <button 
-                                        onClick={() => setStockEditingProduct(p)} 
-                                        className="text-right hover:bg-slate-100 p-2 rounded-md transition-colors dark:hover:bg-slate-700"
-                                        aria-label={`Editar stock de ${p.name}`}
+                                        onClick={() => handleToggleExpand(p.id)}
+                                        className="w-full p-3 flex items-center gap-4 text-left"
+                                        aria-expanded={isExpanded}
+                                        aria-controls={`product-history-${p.id}`}
                                     >
-                                    <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
-                                    <p className="text-xs text-slate-400">en stock</p>
+                                        <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-md object-cover bg-slate-100 flex-shrink-0"/>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(p.price)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div 
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => handleActionClick(e, () => setStockEditingProduct(p))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => setStockEditingProduct(p)) }}
+                                                className="text-right hover:bg-slate-100 p-2 rounded-md transition-colors dark:hover:bg-slate-700 cursor-pointer"
+                                                aria-label={`Editar stock de ${p.name}`}
+                                            >
+                                                <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
+                                                <p className="text-xs text-slate-400">en stock</p>
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <div 
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => handleActionClick(e, () => handleOpenEditModal(p))}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => handleOpenEditModal(p)) }}
+                                                    className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors p-1 cursor-pointer" aria-label={`Editar ${p.name}`}
+                                                >
+                                                    <PencilIcon className="w-5 h-5"/>
+                                                </div>
+                                                <div 
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => handleActionClick(e, () => setProductToDelete(p))}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => setProductToDelete(p)) }}
+                                                    className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors p-1 cursor-pointer" aria-label={`Eliminar ${p.name}`}
+                                                >
+                                                    <TrashIcon className="w-5 h-5"/>
+                                                </div>
+                                            </div>
+                                            <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </div>
                                     </button>
-                                    <div className="flex flex-col gap-2">
-                                        <button onClick={() => handleOpenEditModal(p)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" aria-label={`Editar ${p.name}`}>
-                                            <PencilIcon className="w-5 h-5"/>
-                                        </button>
-                                        <button onClick={() => setProductToDelete(p)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors" aria-label={`Eliminar ${p.name}`}>
-                                            <TrashIcon className="w-5 h-5"/>
-                                        </button>
-                                    </div>
+                                     {isExpanded && (
+                                        <div id={`product-history-${p.id}`} className="px-4 pb-4">
+                                            <div className="border-t pt-4 dark:border-slate-700">
+                                                <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">Historial de Movimientos</h4>
+                                                {historyWithStock.length > 0 ? (
+                                                    <ul className="space-y-2 max-h-60 overflow-y-auto">
+                                                        {historyWithStock.map((item, index) => (
+                                                            <li key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-slate-50 dark:bg-slate-700/50">
+                                                                <div>
+                                                                    <p className="font-medium text-slate-800 dark:text-slate-200">{reasonToText(item.reason)}</p>
+                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.date).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className={`font-bold text-lg ${item.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                        {item.change > 0 ? '+' : ''}{item.change}
+                                                                    </p>
+                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Resultante: {item.resultingStock}</p>
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <p className="text-center text-sm text-slate-500 py-4">No hay historial de movimientos para este producto.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
 
