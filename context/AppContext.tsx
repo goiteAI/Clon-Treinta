@@ -65,13 +65,16 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
   const [state, setState] = useState(() => {
     try {
       const item = window.localStorage.getItem(key);
-      const parsedItem = item ? JSON.parse(item) : initialValue;
+      let parsedItem = item ? JSON.parse(item) : initialValue;
 
-      // Data migration to ensure products have a stockHistory array.
+      // Data migration to ensure products have a valid stockHistory array.
       if (key === 'treinta-products' && Array.isArray(parsedItem)) {
+          // Filter out any null/undefined entries first.
+          parsedItem = parsedItem.filter((p: any) => p && typeof p === 'object');
+          
           parsedItem.forEach((product: any) => {
-              if (!product.stockHistory) {
-                  // If history is missing, create a default "initial" entry based on current stock.
+              // More robust check: if stockHistory is missing OR not an array, fix it.
+              if (!Array.isArray(product.stockHistory)) {
                   product.stockHistory = [{ date: new Date().toISOString(), change: product.stock || 0, reason: 'initial' }];
               }
           });
