@@ -65,7 +65,19 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
   const [state, setState] = useState(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      const parsedItem = item ? JSON.parse(item) : initialValue;
+
+      // Data migration to ensure products have a stockHistory array.
+      if (key === 'treinta-products' && Array.isArray(parsedItem)) {
+          parsedItem.forEach((product: any) => {
+              if (!product.stockHistory) {
+                  // If history is missing, create a default "initial" entry based on current stock.
+                  product.stockHistory = [{ date: new Date().toISOString(), change: product.stock || 0, reason: 'initial' }];
+              }
+          });
+      }
+      
+      return parsedItem;
     } catch (error) {
       console.error(`Error reading localStorage key “${key}”:`, error);
       return initialValue;
