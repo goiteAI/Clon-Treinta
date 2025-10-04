@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import type { Product, StockHistoryEntry } from '../types';
+import type { Product, StockHistoryEntry, StockInEntry } from '../types';
 import EditStockModal from '../components/EditStockModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import StockInModal from '../components/StockInModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 
@@ -133,6 +134,9 @@ const InventoryDashboard: React.FC = () => {
             'sale': 'Venta',
             'sale_update': 'Venta Editada',
             'sale_delete': 'Venta Anulada',
+            'restock': 'Entrada Mercancía',
+            'restock_update': 'Entrada Editada',
+            'restock_delete': 'Entrada Anulada'
         };
         return map[reason] || 'Desconocido';
     }
@@ -140,14 +144,19 @@ const InventoryDashboard: React.FC = () => {
     const analyticsData = useMemo(() => {
         const now = new Date();
         let startDate: Date;
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         switch (timePeriod) {
-            case 'week':
-                const dayOfWeek = today.getDay();
-                const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-                startDate = new Date(new Date(today.setDate(diff)).setHours(0, 0, 0, 0));
+            case 'week': {
+                const firstDayOfWeek = new Date(startOfToday); // Create a clone
+                const day = firstDayOfWeek.getDay();
+                // Adjust for Sunday being 0, assuming week starts on Monday
+                const diff = firstDayOfWeek.getDate() - day + (day === 0 ? -6 : 1); 
+                firstDayOfWeek.setDate(diff);
+                startDate = new Date(firstDayOfWeek.setHours(0, 0, 0, 0));
                 break;
+            }
             case 'month':
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 break;
@@ -156,7 +165,7 @@ const InventoryDashboard: React.FC = () => {
                 break;
             case 'today':
             default:
-                startDate = today;
+                startDate = startOfToday;
                 break;
         }
 
@@ -169,15 +178,15 @@ const InventoryDashboard: React.FC = () => {
 
         const filteredMovements = allMovements.filter(h => new Date(h.date) >= startDate);
         
-        const unitsSold = filteredMovements.reduce((sum, h) => h.change < 0 ? sum + Math.abs(h.change) : sum, 0);
-        const unitsAdded = filteredMovements.reduce((sum, h) => h.change > 0 ? sum + h.change : sum, 0);
+        const unitsSold = filteredMovements.reduce((sum, h) => (h.reason === 'sale' || h.reason === 'sale_update') && h.change < 0 ? sum + Math.abs(h.change) : sum, 0);
+        const unitsAdded = filteredMovements.reduce((sum, h) => (h.reason === 'restock' || h.reason === 'sale_delete') && h.change > 0 ? sum + h.change : sum, 0);
 
         return {
             inventoryValue,
             profitPotential,
             unitsSold,
             unitsAdded,
-            recentMovements: allMovements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20),
+            recentMovements: filteredMovements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20),
             chartData: [{ name: 'Movimientos', Entradas: unitsAdded, Salidas: unitsSold }],
         };
     }, [products, timePeriod]);
@@ -242,15 +251,100 @@ const InventoryDashboard: React.FC = () => {
     );
 };
 
+// --- HISTORIAL DE ENTRADAS DE MERCANCÍA ---
+const StockInHistoryView: React.FC<{
+    onEdit: (entry: StockInEntry) => void;
+    onDelete: (entry: StockInEntry) => void;
+}> = ({ onEdit, onDelete }) => {
+    const { stockInEntries, products } = useAppContext();
+    const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+
+    const getProduct = (id: string) => products.find(p => p.id === id);
+
+    const handleToggleExpand = (entryId: string) => {
+        setExpandedEntryId(prevId => (prevId === entryId ? null : entryId));
+    };
+
+    return (
+        <div className="space-y-3">
+            {stockInEntries.length > 0 ? stockInEntries.map(entry => {
+                const isExpanded = expandedEntryId === entry.id;
+                const totalItems = entry.items.reduce((sum, item) => sum + item.quantity, 0);
+
+                return (
+                    <div key={entry.id} className="bg-white rounded-lg shadow-sm dark:bg-slate-800">
+                        <div className="w-full p-3 flex items-center gap-4 text-left">
+                            <button 
+                                onClick={() => handleToggleExpand(entry.id)}
+                                className="flex items-center gap-4 text-left flex-grow"
+                                aria-expanded={isExpanded}
+                                aria-controls={`stockin-details-${entry.id}`}
+                            >
+                                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 dark:bg-slate-700 dark:text-slate-400 flex-shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-semibold text-slate-800 dark:text-slate-100">
+                                        {new Date(entry.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                                        {entry.reference ? `Ref: ${entry.reference}` : 'Sin referencia'}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <p className="font-bold text-lg text-green-600">+{totalItems}</p>
+                                        <p className="text-xs text-slate-400">unidades</p>
+                                    </div>
+                                    <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
+                                </div>
+                            </button>
+                            <div className="flex flex-col gap-2 ml-2">
+                                <button onClick={() => onEdit(entry)} className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 p-1" aria-label="Editar entrada"><PencilIcon className="w-5 h-5"/></button>
+                                <button onClick={() => onDelete(entry)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 p-1" aria-label="Eliminar entrada"><TrashIcon className="w-5 h-5"/></button>
+                            </div>
+                        </div>
+                        {isExpanded && (
+                            <div id={`stockin-details-${entry.id}`} className="px-4 pb-4">
+                                <div className="border-t pt-3 dark:border-slate-700">
+                                    <ul className="space-y-2">
+                                        {entry.items.map(item => {
+                                            const product = getProduct(item.productId);
+                                            return (
+                                                <li key={item.productId} className="flex justify-between items-center text-sm p-2 rounded-md bg-slate-50 dark:bg-slate-700/50">
+                                                    <span className="text-slate-700 dark:text-slate-300">{product?.name || 'Producto no encontrado'}</span>
+                                                    <span className="font-semibold text-slate-800 dark:text-slate-100">+{item.quantity} uds.</span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }) : (
+                <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
+                    <p>No has registrado ninguna entrada de mercancía.</p>
+                    <p className="text-sm">Usa el botón azul para añadir tu primera entrada.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 // --- PANTALLA PRINCIPAL DE INVENTARIO ---
 const InventoryScreen: React.FC = () => {
-    const { products, deleteProduct } = useAppContext();
+    const { products, deleteProduct, deleteStockInEntry } = useAppContext();
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
     const [stockEditingProduct, setStockEditingProduct] = useState<Product | null>(null);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-    const [activeTab, setActiveTab] = useState<'list' | 'dashboard'>('list');
+    const [stockInEntryToEdit, setStockInEntryToEdit] = useState<StockInEntry | null>(null);
+    const [stockInEntryToDelete, setStockInEntryToDelete] = useState<StockInEntry | null>(null);
+    const [activeTab, setActiveTab] = useState<'list' | 'dashboard' | 'stock_in_history'>('list');
     const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
@@ -258,6 +352,16 @@ const InventoryScreen: React.FC = () => {
     const handleOpenAddModal = () => {
         setProductToEdit(null);
         setIsProductModalOpen(true);
+    };
+    
+    const handleOpenStockInAddModal = () => {
+        setStockInEntryToEdit(null);
+        setIsStockInModalOpen(true);
+    };
+
+    const handleOpenStockInEditModal = (entry: StockInEntry) => {
+        setStockInEntryToEdit(entry);
+        setIsStockInModalOpen(true);
     };
 
     const handleOpenEditModal = (product: Product) => {
@@ -272,6 +376,13 @@ const InventoryScreen: React.FC = () => {
         }
     };
     
+    const handleStockInDeleteConfirm = () => {
+        if (stockInEntryToDelete) {
+            deleteStockInEntry(stockInEntryToDelete.id);
+            setStockInEntryToDelete(null);
+        }
+    };
+
     const handleToggleExpand = (productId: string) => {
         setExpandedProductId(prevId => (prevId === productId ? null : productId));
     };
@@ -288,6 +399,9 @@ const InventoryScreen: React.FC = () => {
             'sale': 'Venta',
             'sale_update': 'Venta Editada',
             'sale_delete': 'Venta Anulada',
+            'restock': 'Entrada Mercancía',
+            'restock_update': 'Entrada Editada',
+            'restock_delete': 'Entrada Anulada'
         };
         return map[reason] || 'Desconocido';
     }
@@ -303,10 +417,13 @@ const InventoryScreen: React.FC = () => {
                 <div className="border-b mb-4 dark:border-slate-700">
                     <div className="flex -mb-px">
                         <button onClick={() => setActiveTab('list')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'list' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
-                            Lista de Productos
+                            Productos
+                        </button>
+                        <button onClick={() => setActiveTab('stock_in_history')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'stock_in_history' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+                            Entradas Registradas
                         </button>
                         <button onClick={() => setActiveTab('dashboard')} className={`py-2 px-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'dashboard' ? 'border-green-500 text-green-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
-                            Análisis de Inventario
+                            Análisis
                         </button>
                     </div>
                 </div>
@@ -403,19 +520,31 @@ const InventoryScreen: React.FC = () => {
                         })}
                     </div>
                 )}
-
+                
+                {activeTab === 'stock_in_history' && (
+                    <StockInHistoryView 
+                        onEdit={handleOpenStockInEditModal} 
+                        onDelete={setStockInEntryToDelete} 
+                    />
+                )}
                 {activeTab === 'dashboard' && <InventoryDashboard />}
             </div>
 
-            {activeTab === 'list' && (
-                <button onClick={handleOpenAddModal} className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105" aria-label="Añadir nuevo producto">
+            <div className="fixed bottom-20 right-5 flex flex-col gap-3">
+                <button onClick={handleOpenStockInAddModal} className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform transform hover:scale-105" aria-label="Registrar Entrada de Mercancía">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                </button>
+                 <button onClick={handleOpenAddModal} className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105" aria-label="Añadir nuevo producto">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                 </button>
-            )}
+            </div>
             
             {isProductModalOpen && <ProductModal productToEdit={productToEdit} onClose={() => setIsProductModalOpen(false)} />}
+            {isStockInModalOpen && <StockInModal stockInEntryToEdit={stockInEntryToEdit} onClose={() => setIsStockInModalOpen(false)} />}
             {stockEditingProduct && <EditStockModal product={stockEditingProduct} onClose={() => setStockEditingProduct(null)} />}
             {productToDelete && (
                 <ConfirmationModal
@@ -424,6 +553,15 @@ const InventoryScreen: React.FC = () => {
                     onConfirm={handleDeleteConfirm}
                     title="Confirmar Eliminación"
                     message={`¿Estás seguro de que quieres eliminar el producto "${productToDelete.name}"? Esta acción no se puede deshacer.`}
+                />
+            )}
+            {stockInEntryToDelete && (
+                <ConfirmationModal
+                    isOpen={!!stockInEntryToDelete}
+                    onClose={() => setStockInEntryToDelete(null)}
+                    onConfirm={handleStockInDeleteConfirm}
+                    title="Confirmar Eliminación"
+                    message={`¿Estás seguro de que quieres eliminar esta entrada de mercancía? El stock de los productos involucrados será revertido. Esta acción no se puede deshacer.`}
                 />
             )}
         </div>

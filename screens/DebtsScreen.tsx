@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction } from '../types';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -8,12 +9,20 @@ const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.134H8.09a2.09 2.09 0 00-2.09 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+);
+
 const DebtsScreen: React.FC = () => {
-    const { transactions, contacts, addPayment, updatePayment } = useAppContext();
+    const { transactions, contacts, addPayment, updatePayment, deletePayment } = useAppContext();
     const [addingPaymentTo, setAddingPaymentTo] = useState<string | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentError, setPaymentError] = useState<string>('');
     const [editingPaymentInfo, setEditingPaymentInfo] = useState<{ transactionId: string; paymentIndex: number; amount: number } | null>(null);
+    const [paymentToConfirm, setPaymentToConfirm] = useState<{ transaction: Transaction; amount: number } | null>(null);
+    const [paymentToDelete, setPaymentToDelete] = useState<{ transactionId: string; paymentIndex: number; amount: number; date: string } | null>(null);
     const [notification, setNotification] = useState<{ type: 'success' | 'paid'; message: string } | null>(null);
 
     useEffect(() => {
@@ -45,7 +54,7 @@ const DebtsScreen: React.FC = () => {
         }, 0);
     }, [debts]);
     
-    const handleSavePayment = (transaction: Transaction) => {
+    const handleAddPaymentClick = (transaction: Transaction) => {
         setPaymentError('');
         const totalPaid = transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
         const amountDue = transaction.totalAmount - totalPaid;
@@ -59,17 +68,27 @@ const DebtsScreen: React.FC = () => {
             return;
         }
         
-        addPayment(transaction.id, paymentAmount);
+        setPaymentToConfirm({ transaction, amount: paymentAmount });
+    };
 
-        const newTotalPaid = totalPaid + paymentAmount;
+    const handleConfirmAddPayment = () => {
+        if (!paymentToConfirm) return;
+
+        const { transaction, amount } = paymentToConfirm;
+        addPayment(transaction.id, amount);
+
+        const totalPaid = transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        const newTotalPaid = totalPaid + amount;
+
         if (newTotalPaid >= transaction.totalAmount) {
             setNotification({ type: 'paid', message: '¡Deuda completada! El cliente ha saldado su cuenta.' });
         } else {
             setNotification({ type: 'success', message: 'Abono registrado con éxito.' });
         }
 
-        setAddingPaymentTo(null); // Close the form on success
+        setAddingPaymentTo(null);
         setPaymentAmount(0);
+        setPaymentToConfirm(null);
     };
 
     const handleSavePaymentEdit = () => {
@@ -100,6 +119,13 @@ const DebtsScreen: React.FC = () => {
         updatePayment(transactionId, paymentIndex, newAmount);
         setEditingPaymentInfo(null);
         setPaymentError('');
+    };
+
+    const handleDeletePayment = () => {
+        if (paymentToDelete) {
+            deletePayment(paymentToDelete.transactionId, paymentToDelete.paymentIndex);
+            setPaymentToDelete(null);
+        }
     };
 
 
@@ -186,12 +212,17 @@ const DebtsScreen: React.FC = () => {
                                                             <span>{new Date(payment.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
-                                                                <button onClick={() => {
-                                                                    setEditingPaymentInfo({ transactionId: t.id, paymentIndex: index, amount: payment.amount });
-                                                                    setPaymentError('');
-                                                                }} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-blue-500">
-                                                                    <PencilIcon className="w-4 h-4" />
-                                                                </button>
+                                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                                                                    <button onClick={() => {
+                                                                        setEditingPaymentInfo({ transactionId: t.id, paymentIndex: index, amount: payment.amount });
+                                                                        setPaymentError('');
+                                                                    }} className="text-slate-400 hover:text-blue-500 p-1">
+                                                                        <PencilIcon className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button onClick={() => setPaymentToDelete({ transactionId: t.id, paymentIndex: index, amount: payment.amount, date: payment.date })} className="text-slate-400 hover:text-red-500 p-1">
+                                                                        <TrashIcon className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </li>
                                                     )
@@ -214,7 +245,7 @@ const DebtsScreen: React.FC = () => {
                                                     max={amountDue}
                                                 />
                                                 <button
-                                                    onClick={() => handleSavePayment(t)}
+                                                    onClick={() => handleAddPaymentClick(t)}
                                                     className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors"
                                                 >
                                                     Guardar
@@ -253,6 +284,27 @@ const DebtsScreen: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {paymentToConfirm && (
+                <ConfirmationModal
+                    isOpen={!!paymentToConfirm}
+                    onClose={() => setPaymentToConfirm(null)}
+                    onConfirm={handleConfirmAddPayment}
+                    title="Confirmar Abono"
+                    message={`¿Estás seguro de que quieres registrar un abono de ${formatCurrency(paymentToConfirm.amount)}?`}
+                    confirmText="Confirmar"
+                />
+            )}
+
+            {paymentToDelete && (
+                <ConfirmationModal
+                    isOpen={!!paymentToDelete}
+                    onClose={() => setPaymentToDelete(null)}
+                    onConfirm={handleDeletePayment}
+                    title="Confirmar Eliminación"
+                    message={`¿Estás seguro de que quieres eliminar el abono de ${formatCurrency(paymentToDelete.amount)} del ${new Date(paymentToDelete.date).toLocaleDateString('es-ES')}? Esta acción no se puede deshacer.`}
+                />
+            )}
 
             {notification && (
                 <div 

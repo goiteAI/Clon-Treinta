@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 export interface StockHistoryEntry {
   date: string; // ISO string
   change: number; // Positivo para entradas, negativo para salidas
-  reason: 'initial' | 'adjustment' | 'sale' | 'sale_update' | 'sale_delete';
+  reason: 'initial' | 'adjustment' | 'sale' | 'sale_update' | 'sale_delete' | 'restock' | 'restock_update' | 'restock_delete';
   transactionId?: string;
+  stockInId?: string;
 }
 
 export interface Product {
@@ -63,6 +64,18 @@ export interface CompanyInfo {
     logoUrl: string;
 }
 
+export interface StockInEntryItem {
+  productId: string;
+  quantity: number;
+}
+
+export interface StockInEntry {
+  id: string;
+  date: string; // ISO string
+  reference?: string;
+  items: StockInEntryItem[];
+}
+
 export type Page = 'dashboard' | 'sales' | 'inventory' | 'expenses' | 'contacts' | 'settings' | 'debts';
 
 export interface AppContextType {
@@ -71,6 +84,7 @@ export interface AppContextType {
   expenses: Expense[];
   contacts: Contact[];
   companyInfo: CompanyInfo;
+  stockInEntries: StockInEntry[];
   resetData: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'stockHistory'>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => Promise<void>;
@@ -83,11 +97,15 @@ export interface AppContextType {
   updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
   addPayment: (transactionId: string, amount: number) => Promise<void>;
   updatePayment: (transactionId: string, paymentIndex: number, newAmount: number) => Promise<void>;
+  deletePayment: (transactionId: string, paymentIndex: number) => Promise<void>;
   updateProductStock: (productId: string, newStock: number) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   updateTransaction: (transaction: Transaction) => Promise<void>;
   deleteTransaction: (transactionId: string) => Promise<void>;
+  addStockInEntry: (entry: Omit<StockInEntry, 'id'>) => Promise<void>;
+  updateStockInEntry: (entry: StockInEntry) => Promise<void>;
+  deleteStockInEntry: (entryId: string) => Promise<void>;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 }

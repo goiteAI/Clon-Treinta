@@ -7,6 +7,7 @@ import type {
   Expense,
   Contact,
   CompanyInfo,
+  StockInEntry,
 } from '../types';
 
 // Initial Data for demonstration (used only if localStorage is empty)
@@ -107,6 +108,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [expenses, setExpenses] = usePersistentState<Expense[]>('treinta-expenses', initialExpenses);
   const [contacts, setContacts] = usePersistentState<Contact[]>('treinta-contacts', initialContacts);
   const [companyInfo, setCompanyInfo] = usePersistentState<CompanyInfo>('treinta-companyInfo', initialCompanyInfo);
+  const [stockInEntries, setStockInEntries] = usePersistentState<StockInEntry[]>('treinta-stock-in-entries', []);
   const [globalInvoiceCounter, setGlobalInvoiceCounter] = usePersistentState<number>('treinta-global-invoice-counter', 1);
   
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -137,6 +139,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setTransactions([]);
         setExpenses([]);
         setContacts([]);
+        setStockInEntries([]);
         // Reset company info to a blank slate
         setCompanyInfo({
             name: "Nombre de tu Negocio",
@@ -253,6 +256,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         return t;
     }));
   };
+
+  const deletePayment = async (transactionId: string, paymentIndex: number) => {
+    setTransactions(prev => prev.map(t => {
+        if (t.id === transactionId && t.payments) {
+            const updatedPayments = t.payments.filter((_, index) => index !== paymentIndex);
+            return { ...t, payments: updatedPayments };
+        }
+        return t;
+    }));
+  };
   
   const updateProductStock = async (productId: string, newStock: number) => {
     setProducts(prev => prev.map(p => {
@@ -346,6 +359,92 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setTransactions(prev => prev.filter(t => t.id !== transactionId));
   };
 
+  const addStockInEntry = async (entry: Omit<StockInEntry, 'id'>) => {
+    const newEntry: StockInEntry = {
+      ...entry,
+      id: `stockin_${Date.now()}`
+    };
+
+    setStockInEntries(prev => [newEntry, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
+    const productMap = new Map(products.map(p => [p.id, { ...p, stockHistory: [...p.stockHistory] }]));
+
+    for (const item of newEntry.items) {
+        const product = productMap.get(item.productId);
+        if (product) {
+            product.stock += item.quantity;
+            product.stockHistory.push({
+                date: newEntry.date,
+                change: item.quantity,
+                reason: 'restock',
+                stockInId: newEntry.id,
+            });
+            productMap.set(item.productId, product);
+        }
+    }
+    
+    setProducts(Array.from(productMap.values()));
+  };
+
+  const updateStockInEntry = async (updatedEntry: StockInEntry) => {
+    const oldEntry = stockInEntries.find(e => e.id === updatedEntry.id);
+    if (!oldEntry) return;
+
+    const productMap = new Map(products.map(p => [p.id, { ...p, stockHistory: [...p.stockHistory] }]));
+
+    const oldItemsMap = new Map(oldEntry.items.map(item => [item.productId, item.quantity]));
+    const newItemsMap = new Map(updatedEntry.items.map(item => [item.productId, item.quantity]));
+    const allProductIds = new Set([...oldItemsMap.keys(), ...newItemsMap.keys()]);
+
+    allProductIds.forEach(productId => {
+        const oldQty = oldItemsMap.get(productId) || 0;
+        const newQty = newItemsMap.get(productId) || 0;
+        const delta = newQty - oldQty;
+
+        if (delta !== 0) {
+            const product = productMap.get(productId);
+            if (product) {
+                product.stock += delta;
+                product.stockHistory.push({
+                    date: updatedEntry.date,
+                    change: delta,
+                    reason: 'restock_update',
+                    stockInId: updatedEntry.id,
+                });
+                productMap.set(productId, product);
+            }
+        }
+    });
+
+    setProducts(Array.from(productMap.values()));
+    setStockInEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e)
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
+  const deleteStockInEntry = async (entryId: string) => {
+    const entryToDelete = stockInEntries.find(e => e.id === entryId);
+    if (!entryToDelete) return;
+
+    const productMap = new Map(products.map(p => [p.id, { ...p, stockHistory: [...p.stockHistory] }]));
+
+    for (const item of entryToDelete.items) {
+        const product = productMap.get(item.productId);
+        if (product) {
+            product.stock -= item.quantity;
+            product.stockHistory.push({
+                date: new Date().toISOString(),
+                change: -item.quantity,
+                reason: 'restock_delete',
+                stockInId: entryToDelete.id,
+            });
+            productMap.set(item.productId, product);
+        }
+    }
+
+    setProducts(Array.from(productMap.values()));
+    setStockInEntries(prev => prev.filter(e => e.id !== entryId));
+  };
+
 
   const value = {
     products,
@@ -353,6 +452,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     expenses,
     contacts,
     companyInfo,
+    stockInEntries,
     resetData,
     addProduct,
     addTransaction,
@@ -365,11 +465,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     updateCompanyInfo,
     addPayment,
     updatePayment,
+    deletePayment,
     updateProductStock,
     updateProduct,
     deleteProduct,
     updateTransaction,
     deleteTransaction,
+    addStockInEntry,
+    updateStockInEntry,
+    deleteStockInEntry,
     theme,
     toggleTheme,
   };
