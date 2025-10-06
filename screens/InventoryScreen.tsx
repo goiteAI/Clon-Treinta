@@ -179,12 +179,14 @@ const InventoryDashboard: React.FC = () => {
         const filteredMovements = allMovements.filter(h => new Date(h.date) >= startDate);
         
         const unitsSold = filteredMovements.reduce((sum, h) => (h.reason === 'sale' || h.reason === 'sale_update') && h.change < 0 ? sum + Math.abs(h.change) : sum, 0);
+        const unitsConsumed = filteredMovements.reduce((sum, h) => (h.reason === 'adjustment' && h.change < 0) ? sum + Math.abs(h.change) : sum, 0);
         const unitsAdded = filteredMovements.reduce((sum, h) => (h.reason === 'restock' || h.reason === 'sale_delete') && h.change > 0 ? sum + h.change : sum, 0);
 
         return {
             inventoryValue,
             profitPotential,
             unitsSold,
+            unitsConsumed,
             unitsAdded,
             recentMovements: filteredMovements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20),
             chartData: [{ name: 'Movimientos', Entradas: unitsAdded, Salidas: unitsSold }],
@@ -206,11 +208,12 @@ const InventoryDashboard: React.FC = () => {
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     <StatCard title="Valor del Inventario" value={formatCurrency(analyticsData.inventoryValue)} color="text-blue-600" />
                     <StatCard title="Potencial de Ganancia" value={formatCurrency(analyticsData.profitPotential)} color="text-green-600" />
                     <StatCard title="Unidades Vendidas" value={analyticsData.unitsSold.toString()} color="text-red-600" />
                     <StatCard title="Unidades Añadidas" value={analyticsData.unitsAdded.toString()} color="text-green-600" />
+                    <StatCard title="Unidades Consumidas" value={analyticsData.unitsConsumed.toString()} color="text-orange-500" />
                 </div>
                 
                 <div className="h-64">
