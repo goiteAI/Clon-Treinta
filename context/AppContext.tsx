@@ -110,6 +110,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [companyInfo, setCompanyInfo] = usePersistentState<CompanyInfo>('treinta-companyInfo', initialCompanyInfo);
   const [stockInEntries, setStockInEntries] = usePersistentState<StockInEntry[]>('treinta-stock-in-entries', []);
   const [globalInvoiceCounter, setGlobalInvoiceCounter] = usePersistentState<number>('treinta-global-invoice-counter', 1);
+  const [salesUnitCorrection, setSalesUnitCorrection] = usePersistentState<number>('treinta-sales-unit-correction', 0);
   
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -140,6 +141,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setExpenses([]);
         setContacts([]);
         setStockInEntries([]);
+        setSalesUnitCorrection(0);
         // Reset company info to a blank slate
         setCompanyInfo({
             name: "Nombre de tu Negocio",
@@ -444,6 +446,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setProducts(Array.from(productMap.values()));
     setStockInEntries(prev => prev.filter(e => e.id !== entryId));
   };
+  
+  const updateSalesUnitCorrection = async (newCorrection: number) => {
+    setSalesUnitCorrection(newCorrection);
+  };
 
 
   const value = {
@@ -476,6 +482,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     deleteStockInEntry,
     theme,
     toggleTheme,
+    salesUnitCorrection,
+    updateSalesUnitCorrection,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

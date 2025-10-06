@@ -108,6 +108,8 @@ export interface AppContextType {
   deleteStockInEntry: (entryId: string) => Promise<void>;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  salesUnitCorrection: number;
+  updateSalesUnitCorrection: (newCorrection: number) => Promise<void>;
 }
 
 export interface AppProviderProps {

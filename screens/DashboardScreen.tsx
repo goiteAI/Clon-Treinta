@@ -73,6 +73,11 @@ const DashboardScreen: React.FC = () => {
       
     const totalTransactions = filteredTransactions.length;
     const averageSale = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+    
+    const unitsSold = filteredTransactions.reduce((totalUnits, t) => {
+        return totalUnits + t.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+    }, 0);
+
     const salesByPaymentMethod = filteredTransactions.reduce((acc: Record<string, number>, t) => {
         acc[t.paymentMethod] = (acc[t.paymentMethod] || 0) + t.totalAmount;
         return acc;
@@ -82,6 +87,7 @@ const DashboardScreen: React.FC = () => {
       totalSales,
       totalExpenses: costs,
       profit: totalSales - costs,
+      unitsSold,
       title,
       cardTitlePrefix,
       totalTransactions,
@@ -158,8 +164,9 @@ const DashboardScreen: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
                 {/* Left Side: Stats */}
                 <div className="space-y-4">
-                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                     <div className="grid grid-cols-2 gap-4">
                         <StatCard title={balanceData.cardTitlePrefix} value={formatCurrency(balanceData.totalSales)} color="text-green-600" />
+                        <StatCard title="Unidades Vendidas" value={balanceData.unitsSold.toString()} color="text-amber-500" />
                         <StatCard title="Gastos" value={formatCurrency(balanceData.totalExpenses)} color="text-red-600" />
                         <StatCard title="Utilidad" value={formatCurrency(balanceData.profit)} color={balanceData.profit >= 0 ? 'text-blue-600' : 'text-red-600'} />
                     </div>
