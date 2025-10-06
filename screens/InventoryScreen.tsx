@@ -4,7 +4,6 @@ import type { Product, StockHistoryEntry, StockInEntry } from '../types';
 import EditStockModal from '../components/EditStockModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import StockInModal from '../components/StockInModal';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 
 // --- MODAL DE PRODUCTO ---
@@ -119,78 +118,10 @@ const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ t
     </div>
 );
 
-// --- MODAL DE EDICIÓN DE UNIDADES VENDIDAS ---
-const EditUnitsSoldModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    calculatedSold: number;
-}> = ({ isOpen, onClose, calculatedSold }) => {
-    const { salesUnitCorrection, updateSalesUnitCorrection } = useAppContext();
-    const [correction, setCorrection] = useState(salesUnitCorrection);
-
-    useEffect(() => {
-        setCorrection(salesUnitCorrection);
-    }, [salesUnitCorrection, isOpen]);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        updateSalesUnitCorrection(correction);
-        onClose();
-    };
-
-    const total = calculatedSold + correction;
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col dark:bg-slate-800">
-                <div className="p-4 border-b dark:border-slate-700">
-                    <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">Ajustar Unidades Vendidas</h2>
-                </div>
-                <form onSubmit={handleSubmit}>
-                    <div className="p-6 space-y-4">
-                        <div className="text-center bg-slate-50 p-3 rounded-md dark:bg-slate-700">
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Unidades Vendidas (Calculado)</p>
-                            <p className="font-bold text-2xl text-slate-800 dark:text-slate-100">{calculatedSold}</p>
-                        </div>
-                        <div>
-                            <label htmlFor="correction" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Ajuste Manual</label>
-                            <input
-                                id="correction"
-                                type="number"
-                                placeholder="0"
-                                value={correction}
-                                onChange={e => setCorrection(parseInt(e.target.value, 10) || 0)}
-                                className="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                autoFocus
-                            />
-                            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">Introduce un número para ajustar el total (puede ser negativo).</p>
-                        </div>
-                         <div className="text-center bg-green-50 p-3 rounded-md dark:bg-green-900/50">
-                            <p className="text-sm text-green-700 dark:text-green-300">Total Mostrado</p>
-                            <p className="font-bold text-2xl text-green-600 dark:text-green-400">{total}</p>
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-2 p-4 bg-slate-50 border-t rounded-b-lg dark:bg-slate-800/50 dark:border-slate-700">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md transition-colors dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-slate-100">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors">Guardar Ajuste</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
 
 const InventoryDashboard: React.FC = () => {
-    const { products, salesUnitCorrection } = useAppContext();
+    const { products } = useAppContext();
     const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
-    const [isEditUnitsSoldModalOpen, setIsEditUnitsSoldModalOpen] = useState(false);
-
-    const formatCurrency = (amount: number) => {
-        return amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
-    };
 
     const reasonToText = (reason: StockHistoryEntry['reason']) => {
         const map = {
@@ -234,31 +165,19 @@ const InventoryDashboard: React.FC = () => {
                 break;
         }
 
-        const inventoryValue = products.reduce((sum, p) => sum + (p.stock * p.cost), 0);
-        const profitPotential = products.reduce((sum, p) => sum + (p.stock * (p.price - p.cost)), 0);
-
         const allMovements = products.flatMap(p => 
             p.stockHistory.map(h => ({ ...h, product: p }))
         );
 
         const filteredMovements = allMovements.filter(h => new Date(h.date) >= startDate);
         
-        const calculatedUnitsSold = filteredMovements.reduce((sum, h) => (h.reason === 'sale' || h.reason === 'sale_update') && h.change < 0 ? sum + Math.abs(h.change) : sum, 0);
-        const unitsSold = calculatedUnitsSold + salesUnitCorrection;
         const unitsConsumed = filteredMovements.reduce((sum, h) => (h.reason === 'adjustment' && h.change < 0) ? sum + Math.abs(h.change) : sum, 0);
-        const unitsAdded = filteredMovements.reduce((sum, h) => (h.reason === 'restock' || h.reason === 'sale_delete') && h.change > 0 ? sum + h.change : sum, 0);
 
         return {
-            inventoryValue,
-            profitPotential,
-            unitsSold,
-            calculatedUnitsSold,
             unitsConsumed,
-            unitsAdded,
             recentMovements: filteredMovements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20),
-            chartData: [{ name: 'Movimientos', Entradas: unitsAdded, Salidas: unitsSold }],
         };
-    }, [products, timePeriod, salesUnitCorrection]);
+    }, [products, timePeriod]);
     
 
     return (
@@ -275,30 +194,10 @@ const InventoryDashboard: React.FC = () => {
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    <StatCard title="Valor del Inventario" value={formatCurrency(analyticsData.inventoryValue)} color="text-blue-600" />
-                    <StatCard title="Potencial de Ganancia" value={formatCurrency(analyticsData.profitPotential)} color="text-green-600" />
-                     <button onClick={() => setIsEditUnitsSoldModalOpen(true)} className="relative text-left w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-xl">
-                        <StatCard title="Unidades Vendidas" value={analyticsData.unitsSold.toString()} color="text-red-600" />
-                        <div className="absolute top-2 right-2 p-1 rounded-full bg-slate-100 dark:bg-slate-700 group-hover:bg-slate-200">
-                            <PencilIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                        </div>
-                    </button>
-                    <StatCard title="Unidades Añadidas" value={analyticsData.unitsAdded.toString()} color="text-green-600" />
-                    <StatCard title="Unidades Consumidas" value={analyticsData.unitsConsumed.toString()} color="text-orange-500" />
-                </div>
-                
-                <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={analyticsData.chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                            <YAxis tickLine={false} axisLine={false} />
-                            <Tooltip cursor={{fill: 'rgba(239, 246, 255, 0.5)'}} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: '0.5rem', backdropFilter: 'blur(5px)' }}/>
-                            <Legend />
-                            <Bar dataKey="Entradas" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Salidas" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                <div className="mb-6">
+                    <div className="max-w-xs mx-auto">
+                        <StatCard title="Unidades Consumidas" value={analyticsData.unitsConsumed.toString()} color="text-orange-500" />
+                    </div>
                 </div>
             </div>
             
@@ -322,13 +221,6 @@ const InventoryDashboard: React.FC = () => {
                     )) : <p className="text-center text-slate-500 py-4">No hay movimientos registrados.</p>}
                 </div>
             </div>
-             {isEditUnitsSoldModalOpen && (
-                <EditUnitsSoldModal
-                    isOpen={isEditUnitsSoldModalOpen}
-                    onClose={() => setIsEditUnitsSoldModalOpen(false)}
-                    calculatedSold={analyticsData.calculatedUnitsSold}
-                />
-            )}
         </div>
     );
 };

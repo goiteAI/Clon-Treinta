@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import AddSaleModal from '../components/AddSaleModal';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import TopSoldProductsModal from '../components/TopSoldProductsModal';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -23,6 +24,7 @@ const SubStat: React.FC<{ title: string; value: string; color?: string }> = ({ t
 const DashboardScreen: React.FC = () => {
   const { transactions, expenses } = useAppContext();
   const [isAddSaleModalOpen, setIsAddSaleModalOpen] = useState(false);
+  const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
 
   const formatCurrency = (amount: number) => {
@@ -43,17 +45,17 @@ const DashboardScreen: React.FC = () => {
             const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
             startDate = new Date(new Date(today.setDate(diff)).setHours(0, 0, 0, 0));
             title = 'Balance de la Semana';
-            cardTitlePrefix = 'Ventas';
+            cardTitlePrefix = 'Ventas de la Semana';
             break;
         case 'month':
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             title = 'Balance del Mes';
-            cardTitlePrefix = 'Ventas';
+            cardTitlePrefix = 'Ventas del Mes';
             break;
         case 'year':
             startDate = new Date(now.getFullYear(), 0, 1);
             title = 'Balance del Año';
-            cardTitlePrefix = 'Ventas';
+            cardTitlePrefix = 'Ventas del Año';
             break;
         case 'today':
         default:
@@ -93,6 +95,7 @@ const DashboardScreen: React.FC = () => {
       totalTransactions,
       averageSale,
       salesByPaymentMethod,
+      filteredTransactions,
     };
   }, [transactions, expenses, timePeriod]);
 
@@ -166,7 +169,9 @@ const DashboardScreen: React.FC = () => {
                 <div className="space-y-4">
                      <div className="grid grid-cols-2 gap-4">
                         <StatCard title={balanceData.cardTitlePrefix} value={formatCurrency(balanceData.totalSales)} color="text-green-600" />
-                        <StatCard title="Unidades Vendidas" value={balanceData.unitsSold.toString()} color="text-amber-500" />
+                        <button onClick={() => setIsTopSoldModalOpen(true)} className="text-left w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-xl">
+                            <StatCard title="Unidades Vendidas" value={balanceData.unitsSold.toString()} color="text-amber-500" />
+                        </button>
                         <StatCard title="Gastos" value={formatCurrency(balanceData.totalExpenses)} color="text-red-600" />
                         <StatCard title="Utilidad" value={formatCurrency(balanceData.profit)} color={balanceData.profit >= 0 ? 'text-blue-600' : 'text-red-600'} />
                     </div>
@@ -223,6 +228,7 @@ const DashboardScreen: React.FC = () => {
           </svg>
       </button>
       {isAddSaleModalOpen && <AddSaleModal onClose={() => setIsAddSaleModalOpen(false)} />}
+      {isTopSoldModalOpen && <TopSoldProductsModal onClose={() => setIsTopSoldModalOpen(false)} transactions={balanceData.filteredTransactions} periodTitle={balanceData.cardTitlePrefix} />}
     </div>
   );
 };
