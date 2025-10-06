@@ -135,14 +135,47 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                 <div className="p-4 flex-1 overflow-y-auto pr-2 space-y-4">
                     <div>
                         <h3 className="font-semibold text-slate-700 dark:text-slate-300">Productos Disponibles</h3>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
                             {products.map(p => {
                                 const availableStock = getAvailableStock(p);
                                 return (
-                                <button key={p.id} onClick={() => handleAddProduct(p)} className={`p-2 border rounded-md text-center text-sm transition-colors ${availableStock <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500' : 'bg-green-50 hover:bg-green-100 dark:bg-green-900/50 dark:hover:bg-green-900'}`} disabled={availableStock <= 0}>
-                                    {p.name} <span className="text-xs block text-slate-500">({availableStock})</span>
-                                </button>
-                            )})}
+                                    <button
+                                        key={p.id}
+                                        onClick={() => handleAddProduct(p)}
+                                        disabled={availableStock <= 0}
+                                        className={`relative group flex flex-col items-center justify-start text-center border rounded-lg overflow-hidden transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800
+                                            ${availableStock <= 0
+                                                ? 'bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed'
+                                                : 'bg-white dark:bg-slate-700 hover:shadow-md hover:-translate-y-1'
+                                            }`}
+                                        aria-label={`Añadir ${p.name} al carrito`}
+                                    >
+                                        <div className="relative w-full aspect-square bg-slate-100 dark:bg-slate-600">
+                                            <img
+                                                src={p.imageUrl}
+                                                alt={p.name}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                            />
+                                            {availableStock <= 0 && (
+                                                <div className="absolute inset-0 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center">
+                                                    <span className="px-2 py-1 text-xs font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 rounded-full">
+                                                        Agotado
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-2 w-full">
+                                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" title={p.name}>
+                                                {p.name}
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                ({availableStock})
+                                            </p>
+                                        </div>
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
 
@@ -185,7 +218,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                                               ${(item.unitPrice * item.quantity).toLocaleString('es-CO')}
                                           </p>
                                           <button type="button" onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700 transition-colors">
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                               </svg>
                                           </button>
