@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import type { Page } from './types';
@@ -12,7 +11,7 @@ import ContactsScreen from './screens/ContactsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebtsScreen from './screens/DebtsScreen';
 
-const App: React.FC = () => {
+const MainApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   const renderContent = () => {
@@ -37,13 +36,20 @@ const App: React.FC = () => {
   };
 
   return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <main className="pb-16">
+        {renderContent()}
+      </main>
+      <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
+    </div>
+  );
+};
+
+
+const App: React.FC = () => {
+  return (
     <AppProvider>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <main className="pb-16">
-          {renderContent()}
-        </main>
-        <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      </div>
+      <MainApp />
     </AppProvider>
   );
 };

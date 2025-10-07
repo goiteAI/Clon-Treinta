@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type {
   AppContextType,
@@ -138,6 +137,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     saveData('stockInEntries', data.stockInEntries || [], setStockInEntries);
     saveData('salesUnitCorrection', data.salesUnitCorrection || 0, setSalesUnitCorrection);
     toggleTheme(data.theme || 'light');
+  };
+
+  const importLegacyData = async () => {
+    // For this rescue feature, we assume the old keys are the same as the new ones.
+    const keyMap = {
+        'products': setProducts,
+        'transactions': setTransactions,
+        'expenses': setExpenses,
+        'contacts': setContacts,
+        'companyInfo': setCompanyInfo,
+        'stockInEntries': setStockInEntries,
+        'salesUnitCorrection': setSalesUnitCorrection,
+    };
+
+    for (const [key, setter] of Object.entries(keyMap)) {
+        const legacyData = localStorage.getItem(key);
+        if (legacyData) {
+            try {
+                const parsedData = JSON.parse(legacyData);
+                saveData(key, parsedData, setter as React.Dispatch<React.SetStateAction<any>>);
+            } catch (error) {
+                console.error(`Error parsing legacy data for key ${key}:`, error);
+            }
+        }
+    }
+    
+    const legacyTheme = localStorage.getItem('theme');
+    if (legacyTheme === 'dark' || legacyTheme === 'light') {
+        toggleTheme(legacyTheme);
+    }
   };
 
   const toggleTheme = (newTheme?: 'light' | 'dark') => {
@@ -485,6 +514,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     salesUnitCorrection,
     updateSalesUnitCorrection,
     importData,
+    importLegacyData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -6,7 +6,8 @@ import type { CompanyInfo } from '../types';
 const SettingsScreen: React.FC = () => {
     const { 
         companyInfo, updateCompanyInfo, resetData, theme, toggleTheme,
-        products, transactions, expenses, contacts, stockInEntries, salesUnitCorrection, importData
+        products, transactions, expenses, contacts, stockInEntries, salesUnitCorrection, importData,
+        importLegacyData
     } = useAppContext();
     const [formState, setFormState] = useState<CompanyInfo>(companyInfo);
     const [isSaved, setIsSaved] = useState(false);
@@ -91,6 +92,19 @@ const SettingsScreen: React.FC = () => {
             }
         };
         reader.readAsText(file);
+    };
+
+    const handleRescue = async () => {
+        if (confirm("Esto intentará buscar datos antiguos en este navegador y reemplazará todos sus datos actuales. ¿Está seguro de que desea continuar?")) {
+            try {
+                await importLegacyData();
+                alert('¡Datos rescatados con éxito! La aplicación se recargará.');
+                window.location.reload();
+            } catch (error) {
+                console.error("Error al rescatar datos:", error);
+                alert(`Hubo un error al rescatar los datos: ${(error as Error).message}`);
+            }
+        }
     };
 
 
@@ -183,6 +197,19 @@ const SettingsScreen: React.FC = () => {
                                 className="hidden"
                             />
                         </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Rescate de Datos</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            Usa esta opción si crees que tienes datos antiguos en este navegador que no se cargaron correctamente. Intentará restaurar la información guardada previamente.
+                        </p>
+                        <button
+                            onClick={handleRescue}
+                            className="w-full px-5 py-2 rounded-md text-white font-semibold bg-purple-600 hover:bg-purple-700 transition-colors"
+                        >
+                            Buscar y Rescatar Datos Antiguos
+                        </button>
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
