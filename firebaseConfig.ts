@@ -1,7 +1,7 @@
-// FIX: Updated Firebase imports to use the v9 compatibility layer. This allows the existing v8 syntax to work with newer versions of the Firebase SDK (v9+), resolving errors where properties like 'apps', 'initializeApp', 'auth', and 'firestore' were not found on the imported 'firebase' object.
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
+
+import firebase from 'firebase/app';
+import 'firebase/auth';
+import 'firebase/firestore';
 
 // MODO DE DEMOSTRACIÓN ACTIVADO PARA PRUEBAS EN VERCEL
 // La app usará datos locales y no intentará conectar con Firebase.
@@ -26,8 +26,6 @@ let firebaseInitialized = false;
 // Initialize Firebase services only if not in demo mode.
 if (!DEMO_MODE) {
   try {
-    // FIX: Switched to v8 initialization syntax.
-    // Added a check to prevent re-initialization on hot reloads.
     if (firebase.apps.length === 0) {
       firebase.initializeApp(firebaseConfig);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import AddSaleModal from '../components/AddSaleModal';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -20,12 +20,33 @@ const SubStat: React.FC<{ title: string; value: string; color?: string }> = ({ t
     </div>
 );
 
+const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+);
+
+const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+);
+
 
 const DashboardScreen: React.FC = () => {
   const { transactions, expenses } = useAppContext();
   const [isAddSaleModalOpen, setIsAddSaleModalOpen] = useState(false);
   const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
+  const [periodOffset, setPeriodOffset] = useState(0);
+
+  // Reset offset when time period (today, week, etc.) changes
+  useEffect(() => {
+    setPeriodOffset(0);
+  }, [timePeriod]);
+
+  const handlePrevPeriod = () => setPeriodOffset(prev => prev + 1);
+  const handleNextPeriod = () => setPeriodOffset(prev => Math.max(0, prev - 1));
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
@@ -34,43 +55,78 @@ const DashboardScreen: React.FC = () => {
   const balanceData = useMemo(() => {
     const now = new Date();
     let startDate: Date;
-    let title: string;
-    let cardTitlePrefix: string;
+    let endDate: Date;
+    let title = '';
+    let cardTitlePrefix = '';
 
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // --- Date Calculation ---
+    if (timePeriod === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - periodOffset);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+    } else if (timePeriod === 'week') {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ...
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Get Monday of current week
+        const mondayOfCurrentWeek = new Date(new Date(today.setDate(diff)).setHours(0, 0, 0, 0));
+        
+        startDate = new Date(mondayOfCurrentWeek);
+        startDate.setDate(startDate.getDate() - (periodOffset * 7));
+        
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+    } else if (timePeriod === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - periodOffset, 1);
+        startDate.setHours(0, 0, 0, 0);
 
-    switch (timePeriod) {
-        case 'week':
-            const dayOfWeek = today.getDay();
-            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            startDate = new Date(new Date(today.setDate(diff)).setHours(0, 0, 0, 0));
-            title = 'Balance de la Semana';
-            cardTitlePrefix = 'Ventas de la Semana';
-            break;
-        case 'month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            title = 'Balance del Mes';
-            cardTitlePrefix = 'Ventas del Mes';
-            break;
-        case 'year':
-            startDate = new Date(now.getFullYear(), 0, 1);
-            title = 'Balance del Año';
-            cardTitlePrefix = 'Ventas del Año';
-            break;
-        case 'today':
-        default:
-            startDate = today;
-            title = 'Balance del Día';
-            cardTitlePrefix = 'Ventas de Hoy';
-            break;
+        endDate = new Date(now.getFullYear(), now.getMonth() - periodOffset + 1, 0); // Day 0 of next month is last day of current
+        endDate.setHours(23, 59, 59, 999);
+    } else { // 'year'
+        const year = now.getFullYear() - periodOffset;
+        startDate = new Date(year, 0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(year, 11, 31);
+        endDate.setHours(23, 59, 59, 999);
     }
 
-    const filteredTransactions = transactions.filter(t => new Date(t.date) >= startDate);
+    // --- Title Generation ---
+    const formatDate = (date: Date, options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }) => date.toLocaleDateString('es-ES', options);
+    
+    if (timePeriod === 'today') {
+        if (periodOffset === 0) { title = 'Balance del Día'; cardTitlePrefix = 'Ventas de Hoy'; }
+        else if (periodOffset === 1) { title = 'Balance de Ayer'; cardTitlePrefix = 'Ventas de Ayer'; }
+        else { const dateStr = formatDate(startDate); title = `Balance del ${dateStr}`; cardTitlePrefix = `Ventas del ${dateStr}`; }
+    } else if (timePeriod === 'week') {
+        if (periodOffset === 0) { title = 'Balance de la Semana'; cardTitlePrefix = 'Ventas de la Semana'; }
+        else if (periodOffset === 1) { title = 'Balance de la Semana Pasada'; cardTitlePrefix = 'Ventas de la Semana Pasada'; }
+        else { title = `Balance Semanal`; cardTitlePrefix = `Ventas: ${formatDate(startDate)} - ${formatDate(endDate)}`; }
+    } else if (timePeriod === 'month') {
+        const monthYearOptions: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
+        if (periodOffset === 0) { title = 'Balance del Mes'; cardTitlePrefix = 'Ventas del Mes'; }
+        else if (periodOffset === 1) { title = 'Balance del Mes Pasado'; cardTitlePrefix = 'Ventas del Mes Pasado'; }
+        else { const monthName = formatDate(startDate, monthYearOptions); title = `Balance de ${monthName}`; cardTitlePrefix = `Ventas de ${monthName}`; }
+    } else { // 'year'
+        const year = startDate.getFullYear();
+        if (periodOffset === 0) { title = 'Balance del Año'; cardTitlePrefix = 'Ventas del Año'; }
+        else if (periodOffset === 1) { title = 'Balance del Año Pasado'; cardTitlePrefix = 'Ventas del Año Pasado'; }
+        else { title = `Balance de ${year}`; cardTitlePrefix = `Ventas de ${year}`; }
+    }
+
+    // --- Filtering and Calculation ---
+    const filteredTransactions = transactions.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate >= startDate && tDate <= endDate;
+    });
 
     const totalSales = filteredTransactions.reduce((sum: number, t) => sum + t.totalAmount, 0);
 
     const costs = expenses
-      .filter(e => new Date(e.date) >= startDate)
+      .filter(e => {
+          const eDate = new Date(e.date);
+          return eDate >= startDate && eDate <= endDate;
+      })
       .reduce((sum: number, e) => sum + e.amount, 0);
       
     const totalTransactions = filteredTransactions.length;
@@ -97,7 +153,7 @@ const DashboardScreen: React.FC = () => {
       salesByPaymentMethod,
       filteredTransactions,
     };
-  }, [transactions, expenses, timePeriod]);
+  }, [transactions, expenses, timePeriod, periodOffset]);
 
   const PAYMENT_METHOD_COLORS: { [key: string]: string } = {
     'Efectivo': '#f59e0b',    // amber-500
@@ -151,7 +207,18 @@ const DashboardScreen: React.FC = () => {
 
       <div className="p-4 space-y-6">
         <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{balanceData.title}</h2>
+            <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{balanceData.title}</h2>
+                <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                    <button onClick={handlePrevPeriod} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" aria-label="Período anterior">
+                        <ChevronLeftIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleNextPeriod} disabled={periodOffset === 0} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Período siguiente">
+                        <ChevronRightIcon className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
             <div className="flex justify-center mb-6 rounded-lg bg-slate-100 p-1 dark:bg-slate-700">
               {(['today', 'week', 'month', 'year'] as TimePeriod[]).map(period => (
                 <button

@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { CompanyInfo } from '../types';
 
 const SettingsScreen: React.FC = () => {
-    const { companyInfo, updateCompanyInfo, resetData, theme, toggleTheme } = useAppContext();
+    const { 
+        companyInfo, updateCompanyInfo, resetData, theme, toggleTheme,
+        products, transactions, expenses, contacts, stockInEntries, salesUnitCorrection, importData
+    } = useAppContext();
     const [formState, setFormState] = useState<CompanyInfo>(companyInfo);
     const [isSaved, setIsSaved] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setFormState(companyInfo);
@@ -33,6 +38,61 @@ const SettingsScreen: React.FC = () => {
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };
+
+    const handleExport = () => {
+        const dataToExport = {
+            products,
+            transactions,
+            expenses,
+            contacts,
+            companyInfo,
+            stockInEntries,
+            theme,
+            salesUnitCorrection,
+        };
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'datos_mi_negocio.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!confirm("Esto reemplazará todos sus datos actuales. ¿Está seguro de que desea continuar?")) {
+            // Reset file input value so the same file can be selected again
+            if(fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target?.result as string);
+                await importData(data);
+                alert('¡Datos importados con éxito!');
+                window.location.reload(); // Reload to reflect changes everywhere
+            } catch (error) {
+                console.error("Error al importar datos:", error);
+                alert(`Error al importar el archivo: ${(error as Error).message}`);
+            } finally {
+                if(fileInputRef.current) fileInputRef.current.value = "";
+            }
+        };
+        reader.readAsText(file);
+    };
+
 
     return (
         <div>
@@ -86,7 +146,7 @@ const SettingsScreen: React.FC = () => {
                                 <span className="text-sm text-slate-500 dark:text-slate-400">Reduce el brillo para una menor fatiga visual.</span>
                             </div>
                             <button
-                                onClick={toggleTheme}
+                                onClick={() => toggleTheme()}
                                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${theme === 'dark' ? 'bg-green-600' : 'bg-gray-200'}`}
                                 role="switch"
                                 aria-checked={theme === 'dark'}
@@ -100,8 +160,40 @@ const SettingsScreen: React.FC = () => {
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Gestión de Datos</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Guarda una copia de seguridad de tus datos o restáurala desde un archivo.</p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={handleExport}
+                                className="w-full px-5 py-2 rounded-md text-white font-semibold bg-blue-500 hover:bg-blue-600 transition-colors"
+                            >
+                                Exportar Datos
+                            </button>
+                            <button
+                                onClick={handleImportClick}
+                                className="w-full px-5 py-2 rounded-md text-slate-700 font-semibold bg-slate-200 hover:bg-slate-300 transition-colors dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-500"
+                            >
+                                Importar Datos
+                            </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImport}
+                                accept="application/json"
+                                className="hidden"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold text-red-600">Zona de Peligro</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Esta acción es irreversible y borrará todos tus datos actuales.</p>
                         <button
-                            onClick={resetData}
+                            onClick={() => {
+                                if (confirm("¿Estás absolutamente seguro? Todos tus datos se borrarán y se reemplazarán con los datos de demostración.")) {
+                                    resetData();
+                                }
+                            }}
                             className="w-full px-5 py-2 rounded-md text-white font-semibold bg-red-500 hover:bg-red-600 transition-colors"
                         >
                             Borrar Datos y Reiniciar
