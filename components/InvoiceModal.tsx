@@ -81,7 +81,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
         <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center print:hidden">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Factura de Venta</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -106,14 +106,12 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
                 <div className="text-gray-600 font-medium">
                   <p>Factura #:</p>
                   <p>Fecha:</p>
-                  {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>Vence:</p>)}
                   <p>Cliente:</p>
                   <p>Método de Pago:</p>
                 </div>
                 <div className="text-right font-semibold text-black">
                   <p>{transaction.invoiceNumber}</p>
                   <p>{new Date(transaction.date).toLocaleDateString('es-ES')}</p>
-                  {transaction.dueDate && transaction.paymentMethod === 'Crédito' && (<p>{new Date(transaction.dueDate).toLocaleDateString('es-ES')}</p>)}
                   <p>{getContactName(transaction.contactId)}</p>
                   <p>{transaction.paymentMethod}</p>
                 </div>

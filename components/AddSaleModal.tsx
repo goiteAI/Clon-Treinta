@@ -28,7 +28,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                 const due = new Date(transactionToEdit.dueDate);
                 const start = new Date(transactionToEdit.date);
                 const diffTime = Math.max(0, due.getTime() - start.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 setPaymentDays(diffDays);
             } else {
                 setPaymentDays(0);
@@ -100,7 +100,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
         };
 
         const dueDate = (paymentMethod === 'Crédito' && paymentDays > 0)
-            ? new Date(new Date(baseTransaction.date).setDate(new Date(baseTransaction.date).getDate() + paymentDays)).toISOString()
+            ? new Date(new Date(baseTransaction.date).setDate(new Date(baseTransaction.date).getDate() + (paymentDays - 1))).toISOString()
             : undefined;
 
         if (isEditMode && transactionToEdit) {
