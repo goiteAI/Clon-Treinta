@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { CompanyInfo } from '../types';
-import AIAssistant from '../components/AIAssistant';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">
@@ -146,10 +145,6 @@ const SettingsScreen: React.FC = () => {
                             <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
-                </Section>
-                
-                <Section title="Asistente de Negocio">
-                    <AIAssistant />
                 </Section>
                 
                 <Section title="Gestión de Datos">
