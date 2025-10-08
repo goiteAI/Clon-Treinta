@@ -114,7 +114,6 @@ export interface AppContextType {
   salesUnitCorrection: number;
   updateSalesUnitCorrection: (newCorrection: number) => Promise<void>;
   importData: (data: any) => Promise<void>;
-  importLegacyData: () => Promise<void>;
 }
 
 export interface AppProviderProps {

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { CompanyInfo } from '../types';
 import AIAssistant from '../components/AIAssistant';
-import ManualRescueModal from '../components/ManualRescueModal';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">
@@ -29,7 +28,6 @@ const SettingsScreen: React.FC = () => {
     
     const [info, setInfo] = useState<CompanyInfo>(companyInfo);
     const [logoPreview, setLogoPreview] = useState<string | null>(companyInfo.logoUrl);
-    const [isManualRescueOpen, setIsManualRescueOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -165,10 +163,6 @@ const SettingsScreen: React.FC = () => {
                            Importar (Restaurar Backup)
                         </button>
                         <input type="file" ref={fileInputRef} onChange={onFileSelected} accept=".json" className="hidden" />
-                         <button onClick={() => setIsManualRescueOpen(true)} className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-semibold transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                            Rescate Manual de Datos
-                        </button>
                         <button onClick={handleResetData} className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             Restaurar Datos de Fábrica
@@ -176,7 +170,6 @@ const SettingsScreen: React.FC = () => {
                     </div>
                 </Section>
             </div>
-            {isManualRescueOpen && <ManualRescueModal onClose={() => setIsManualRescueOpen(false)} />}
         </div>
     );
 };
