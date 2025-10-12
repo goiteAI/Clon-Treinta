@@ -4,7 +4,7 @@ import type { Page } from './types';
 
 import BottomNav from './components/layout/BottomNav';
 import DashboardScreen from './screens/DashboardScreen';
-import SalesScreen from './screens/SalesScreen';
+// SalesScreen is no longer needed as its functionality is merged into DashboardScreen
 import InventoryScreen from './screens/InventoryScreen';
 import ExpensesScreen from './screens/ExpensesScreen';
 import ContactsScreen from './screens/ContactsScreen';
@@ -18,8 +18,7 @@ const MainApp: React.FC = () => {
     switch (currentPage) {
       case 'dashboard':
         return <DashboardScreen />;
-      case 'sales':
-        return <SalesScreen />;
+      // The 'sales' case is removed
       case 'inventory':
         return <InventoryScreen />;
       case 'expenses':

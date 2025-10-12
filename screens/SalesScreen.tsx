@@ -25,14 +25,27 @@ const getStartOfWeek = (date: Date) => {
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
     return new Date(d.setDate(diff));
 };
+
+const getWeekNumber = (d: Date): number => {
+    // Copy date so don't modify original
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    // Set to nearest Thursday: current date + 4 - current day number
+    // Make Sunday's day number 7
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    // Get first day of year
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    // Calculate full weeks to nearest Thursday
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    // Return week number
+    return weekNo;
+};
+
 const areDatesSame = (d1: Date, d2: Date, mode: ViewMode) => {
     if (mode === 'day') return getDayKey(d1) === getDayKey(d2);
     if (mode === 'month') return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
     if (mode === 'year') return d1.getFullYear() === d2.getFullYear();
     if (mode === 'week') {
-        const start1 = getStartOfWeek(d1);
-        const start2 = getStartOfWeek(d2);
-        return getDayKey(start1) === getDayKey(start2);
+        return d1.getFullYear() === d2.getFullYear() && getWeekNumber(d1) === getWeekNumber(d2);
     }
     return false;
 }
@@ -54,6 +67,7 @@ const SalesScreen: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [timelineTitle, setTimelineTitle] = useState('');
     
     const timelineRef = useRef<HTMLDivElement>(null);
     const activeItemRef = useRef<HTMLButtonElement>(null);
@@ -65,7 +79,6 @@ const SalesScreen: React.FC = () => {
     const timelineItems = useMemo(() => {
         const items = [];
         const today = new Date();
-        const genDate = new Date(today);
 
         switch (viewMode) {
             case 'day':
@@ -76,7 +89,7 @@ const SalesScreen: React.FC = () => {
                         key: getDayKey(date),
                         date: date,
                         label: date.getDate().toString(),
-                        subLabel: date.toLocaleDateString('es-ES', { month: 'short' }),
+                        subLabel: date.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', ''),
                     });
                 }
                 break;
@@ -85,23 +98,22 @@ const SalesScreen: React.FC = () => {
                 for (let i = -12; i <= 12; i++) {
                     const weekStart = new Date(currentWeekStart);
                     weekStart.setDate(currentWeekStart.getDate() + i * 7);
-                    const weekEnd = new Date(weekStart);
-                    weekEnd.setDate(weekStart.getDate() + 6);
                     items.push({
                         key: getDayKey(weekStart),
                         date: weekStart,
-                        label: `${weekStart.getDate()} - ${weekEnd.getDate()}`,
-                        subLabel: weekStart.toLocaleDateString('es-ES', { month: 'short' }),
+                        label: getWeekNumber(weekStart).toString(),
+                        subLabel: 'Semana',
                     });
                 }
                 break;
             case 'month':
                 for (let i = -12; i <= 12; i++) {
                     const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                    const monthLabel = date.toLocaleDateString('es-ES', { month: 'short' });
                     items.push({
                         key: `${date.getFullYear()}-${date.getMonth()}`,
                         date: date,
-                        label: date.toLocaleDateString('es-ES', { month: 'long' }),
+                        label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1).replace('.', ''),
                         subLabel: date.getFullYear().toString(),
                     });
                 }
@@ -120,6 +132,25 @@ const SalesScreen: React.FC = () => {
         }
         return items;
     }, [viewMode]);
+
+    useEffect(() => {
+        let title = '';
+        const date = new Date(currentDate);
+        switch (viewMode) {
+            case 'day':
+                title = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                title = title.charAt(0).toUpperCase() + title.slice(1);
+                break;
+            case 'week':
+            case 'month':
+                title = date.getFullYear().toString();
+                break;
+            case 'year':
+                title = 'Selección Anual';
+                break;
+        }
+        setTimelineTitle(title);
+    }, [currentDate, viewMode]);
 
     useEffect(() => {
         if (activeItemRef.current) {
@@ -206,7 +237,7 @@ const SalesScreen: React.FC = () => {
     return (
         <div className="pb-20">
             <header className="p-4 bg-yellow-400 dark:bg-yellow-600 sticky top-0 z-20 shadow-md">
-               <div className="flex justify-between items-center mb-3">
+               <div className="flex justify-between items-center">
                   <h1 className="text-xl font-bold text-yellow-900 dark:text-white">{companyInfo.name}</h1>
                   <div className="relative">
                       <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-yellow-500/50 transition-colors">
@@ -227,6 +258,9 @@ const SalesScreen: React.FC = () => {
                       )}
                   </div>
                </div>
+                <div className="text-center mt-3 mb-2">
+                    <h2 className="text-sm font-bold text-yellow-800 dark:text-yellow-100 uppercase tracking-wide">{timelineTitle}</h2>
+                </div>
                <div ref={timelineRef} className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                     {timelineItems.map(item => {
                         const isActive = areDatesSame(item.date, currentDate, viewMode);
@@ -236,7 +270,7 @@ const SalesScreen: React.FC = () => {
                              ref={isActive ? activeItemRef : null}
                              onClick={() => setCurrentDate(item.date)}
                              className={`flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg w-16 h-16 transition-colors duration-200 ${
-                                isActive ? 'bg-white shadow-md dark:bg-slate-800' : 'bg-transparent text-white'
+                                isActive ? 'bg-white shadow-md dark:bg-slate-800' : 'bg-transparent'
                              }`}
                            >
                              <span className={`text-xs font-semibold uppercase ${isActive ? 'text-yellow-600 dark:text-yellow-400' : 'text-yellow-800 dark:text-yellow-200'}`}>{item.subLabel}</span>
