@@ -76,7 +76,7 @@ export interface StockInEntry {
   items: StockInEntryItem[];
 }
 
-export type Page = 'dashboard' | 'inventory' | 'expenses' | 'contacts' | 'settings' | 'debts';
+export type Page = 'dashboard' | 'sales' | 'inventory' | 'expenses' | 'contacts' | 'settings' | 'debts';
 
 export interface AppContextType {
   products: Product[];
