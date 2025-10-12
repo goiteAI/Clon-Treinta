@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Product, StockHistoryEntry, StockInEntry } from '../types';
@@ -320,9 +322,12 @@ const InventoryScreen: React.FC = () => {
     const [stockInEntryToDelete, setStockInEntryToDelete] = useState<StockInEntry | null>(null);
     const [activeTab, setActiveTab] = useState<'list' | 'dashboard' | 'stock_in_history'>('list');
     const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+    const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
+    const canAddStockIn = products.length > 0;
+
     const handleOpenAddModal = () => {
         setProductToEdit(null);
         setIsProductModalOpen(true);
@@ -403,7 +408,7 @@ const InventoryScreen: React.FC = () => {
                 </div>
 
                 {activeTab === 'list' && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-20">
                         {products.map(p => {
                             const isExpanded = expandedProductId === p.id;
                             
@@ -439,26 +444,6 @@ const InventoryScreen: React.FC = () => {
                                                 <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
                                                 <p className="text-xs text-slate-400">en stock</p>
                                             </div>
-                                            <div className="flex flex-col gap-2">
-                                                <div 
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onClick={(e) => handleActionClick(e, () => handleOpenEditModal(p))}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => handleOpenEditModal(p)) }}
-                                                    className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors p-1 cursor-pointer" aria-label={`Editar ${p.name}`}
-                                                >
-                                                    <PencilIcon className="w-5 h-5"/>
-                                                </div>
-                                                <div 
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onClick={(e) => handleActionClick(e, () => setProductToDelete(p))}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => setProductToDelete(p)) }}
-                                                    className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors p-1 cursor-pointer" aria-label={`Eliminar ${p.name}`}
-                                                >
-                                                    <TrashIcon className="w-5 h-5"/>
-                                                </div>
-                                            </div>
                                             <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
                                         </div>
                                     </button>
@@ -486,6 +471,23 @@ const InventoryScreen: React.FC = () => {
                                                 ) : (
                                                     <p className="text-center text-sm text-slate-500 py-4">No hay historial de movimientos para este producto.</p>
                                                 )}
+
+                                                <div className="mt-4 pt-4 border-t border-dashed dark:border-slate-600 flex items-center justify-end gap-4">
+                                                    <button 
+                                                        onClick={(e) => handleActionClick(e, () => handleOpenEditModal(p))}
+                                                        className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors" aria-label={`Editar ${p.name}`}
+                                                    >
+                                                        <PencilIcon className="w-4 h-4"/>
+                                                        <span>Editar</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleActionClick(e, () => setProductToDelete(p))}
+                                                        className="flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors" aria-label={`Eliminar ${p.name}`}
+                                                    >
+                                                        <TrashIcon className="w-4 h-4"/>
+                                                        <span>Eliminar</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -504,14 +506,62 @@ const InventoryScreen: React.FC = () => {
                 {activeTab === 'dashboard' && <InventoryDashboard />}
             </div>
 
-            <div className="fixed bottom-20 right-5 flex flex-col gap-3">
-                <button onClick={handleOpenStockInAddModal} className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform transform hover:scale-105" aria-label="Registrar Entrada de Mercancía">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                </button>
-                 <button onClick={handleOpenAddModal} className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105" aria-label="Añadir nuevo producto">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+            {isFabMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-30 z-40" 
+                    onClick={() => setIsFabMenuOpen(false)}
+                    aria-hidden="true"
+                ></div>
+            )}
+            <div className="fixed bottom-20 right-5 z-40 flex flex-col items-end gap-4">
+                {/* Action Menu */}
+                <div 
+                    className={`transition-all duration-300 ease-in-out flex flex-col items-end gap-4 ${isFabMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+                >
+                    {/* Action button 1: Add Stock In */}
+                    <div className="flex items-center gap-3">
+                        <span className={`bg-white text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200 px-3 py-1 rounded-md shadow-sm ${!canAddStockIn && 'text-slate-400 dark:text-slate-500'}`}>
+                            Registrar Entrada
+                        </span>
+                        <button 
+                            onClick={() => { handleOpenStockInAddModal(); setIsFabMenuOpen(false); }} 
+                            className="bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-blue-600 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                            aria-label={canAddStockIn ? "Registrar Entrada de Mercancía" : "Añada productos para registrar entradas"}
+                            disabled={!canAddStockIn}
+                            title={!canAddStockIn ? "Primero debes añadir productos." : "Registrar Entrada de Mercancía"}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    {/* Action button 2: Add Product */}
+                    <div className="flex items-center gap-3">
+                        <span className="bg-white text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200 px-3 py-1 rounded-md shadow-sm">
+                            Añadir Producto
+                        </span>
+                        <button 
+                            onClick={() => { handleOpenAddModal(); setIsFabMenuOpen(false); }} 
+                            className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-green-700"
+                            aria-label="Añadir nuevo producto"
+                        >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Main FAB */}
+                <button 
+                    onClick={() => setIsFabMenuOpen(!isFabMenuOpen)} 
+                    className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-all duration-300 transform hover:scale-105"
+                    aria-haspopup="true"
+                    aria-expanded={isFabMenuOpen}
+                    aria-label="Añadir nuevo"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-7 w-7 transition-transform duration-300 ${isFabMenuOpen ? 'rotate-45' : ''}`} fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                 </button>
