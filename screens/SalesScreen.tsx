@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 // Fix: Import Product and Contact types to be used in the new getTransactionDescription helper function.
 import type { Transaction, Product, Contact } from '../types';
@@ -14,8 +14,6 @@ const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const BanknotesIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.75A.75.75 0 013 4.5h.75m0 0H21M12 12.75h.008v.008H12v-.008z" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21a3.375 3.375 0 003.375-3.375V12.188c0-.775.625-1.406 1.406-1.406h4.438c.781 0 1.406.631 1.406 1.406v5.438a3.375 3.375 0 003.375 3.375M9 12.188c1.181.563 2.57.563 3.75 0" /></svg>;
 const CreditCardIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>;
 const GlobeAltIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A11.953 11.953 0 0112 16.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12a8.959 8.959 0 01-2.284 5.253" /></svg>;
-const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>;
-const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>;
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -54,16 +52,32 @@ const SalesScreen: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [timelineTitle, setTimelineTitle] = useState('');
+    const activeItemRef = useRef<HTMLButtonElement>(null);
+    const [initialRenderDate] = useState(new Date());
     
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
     const canAddSale = products.length > 0;
 
+    const isDateActive = (itemDate: Date, currentDate: Date, viewMode: ViewMode): boolean => {
+        switch (viewMode) {
+            case 'day':
+                return getDayKey(itemDate) === getDayKey(currentDate);
+            case 'week':
+                return getDayKey(getStartOfWeek(itemDate)) === getDayKey(getStartOfWeek(currentDate));
+            case 'month':
+                return itemDate.getFullYear() === currentDate.getFullYear() && itemDate.getMonth() === currentDate.getMonth();
+            case 'year':
+                return itemDate.getFullYear() === currentDate.getFullYear();
+        }
+    };
+
     const timelineItems = useMemo(() => {
         const items = [];
-        const centerDate = new Date(currentDate);
+        const centerDate = new Date(initialRenderDate);
+        const range = 60; // 60 on each side for a good scroll range.
 
-        for (let i = -2; i <= 2; i++) {
+        for (let i = -range; i <= range; i++) {
             const date = new Date(centerDate);
             let key: string;
             let label: string;
@@ -101,7 +115,17 @@ const SalesScreen: React.FC = () => {
             items.push({ key, date, label, subLabel });
         }
         return items;
-    }, [viewMode, currentDate]);
+    }, [viewMode, initialRenderDate]);
+
+    useEffect(() => {
+        if (activeItemRef.current) {
+            activeItemRef.current.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest'
+            });
+        }
+    }, [currentDate, viewMode, timelineItems]);
 
     useEffect(() => {
         let title = '';
@@ -192,79 +216,58 @@ const SalesScreen: React.FC = () => {
         Transferencia: <GlobeAltIcon />,
     };
 
-    const handleDateChange = (direction: 'prev' | 'next') => {
-        const newDate = new Date(currentDate);
-        const step = direction === 'prev' ? -1 : 1;
-
-        switch (viewMode) {
-            case 'day':
-                newDate.setDate(newDate.getDate() + step);
-                break;
-            case 'week':
-                newDate.setDate(newDate.getDate() + (step * 7));
-                break;
-            case 'month':
-                newDate.setMonth(newDate.getMonth() + step);
-                break;
-            case 'year':
-                newDate.setFullYear(newDate.getFullYear() + step);
-                break;
-        }
-        setCurrentDate(newDate);
-    };
-
     return (
         <div className="pb-20">
             <header className="p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-20 shadow-sm">
-               <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center gap-4">
                     <div>
                         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{companyInfo.name}</h1>
                         <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{timelineTitle}</h2>
                     </div>
-                  <div className="flex items-center gap-1">
-                      <button onClick={() => handleDateChange('prev')} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Anterior">
-                          <ChevronLeftIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                      </button>
-                      <div className="flex items-center gap-2">
-                          {timelineItems.map((item, index) => {
-                              const isActive = index === 2;
-                              return (
-                                 <button 
-                                   key={item.key}
-                                   onClick={() => setCurrentDate(item.date)}
-                                   className={`flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg w-16 h-16 transition-colors duration-200 ${
-                                      isActive ? 'bg-green-100 text-green-600 dark:bg-slate-700 dark:text-green-400' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700/50'
-                                   }`}
-                                 >
-                                   {item.subLabel && <span className={`text-xs font-semibold uppercase ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>{item.subLabel}</span>}
-                                   <span className={`text-xl font-bold ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-800 dark:text-slate-100'}`}>{item.label}</span>
-                                 </button>
-                              )
-                          })}
-                      </div>
-                       <button onClick={() => handleDateChange('next')} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Siguiente">
-                           <ChevronRightIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                       </button>
-                      <div className="relative">
-                          <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                              <CalendarIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                          </button>
-                          {isFilterOpen && (
-                              <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
-                                  {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
-                                      <button
-                                          key={mode}
-                                          onClick={() => { setViewMode(mode); setIsFilterOpen(false); setCurrentDate(new Date())}}
-                                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
-                                      >
-                                          {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
-                                      </button>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                  </div>
-               </div>
+                    <div className="flex-1 flex items-center gap-2 min-w-0">
+                        <div
+                            className="flex-1 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory -my-2 py-2"
+                            style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
+                            <div className="flex items-center gap-2 px-[calc(50%-2rem)]">
+                                {timelineItems.map((item) => {
+                                    const isActive = isDateActive(item.date, currentDate, viewMode);
+                                    return (
+                                        <button
+                                            ref={isActive ? activeItemRef : null}
+                                            key={item.key}
+                                            onClick={() => setCurrentDate(item.date)}
+                                            className={`snap-center flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg w-16 h-16 transition-colors duration-200 ${
+                                                isActive ? 'bg-green-100 text-green-600 dark:bg-slate-700 dark:text-green-400' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                                            }`}
+                                        >
+                                            {item.subLabel && <span className={`text-xs font-semibold uppercase ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>{item.subLabel}</span>}
+                                            <span className={`text-xl font-bold ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-800 dark:text-slate-100'}`}>{item.label}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                        <div className="relative">
+                            <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                <CalendarIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+                            </button>
+                            {isFilterOpen && (
+                                <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
+                                    {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
+                                        <button
+                                            key={mode}
+                                            onClick={() => { setViewMode(mode); setIsFilterOpen(false); setCurrentDate(new Date())}}
+                                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
+                                        >
+                                            {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </header>
             
             <div className="p-4 space-y-6">
