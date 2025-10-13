@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 // Fix: Import Product and Contact types to be used in the new getTransactionDescription helper function.
 import type { Transaction, Product, Contact } from '../types';
@@ -14,6 +14,8 @@ const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const BanknotesIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.75A.75.75 0 013 4.5h.75m0 0H21M12 12.75h.008v.008H12v-.008z" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21a3.375 3.375 0 003.375-3.375V12.188c0-.775.625-1.406 1.406-1.406h4.438c.781 0 1.406.631 1.406 1.406v5.438a3.375 3.375 0 003.375 3.375M9 12.188c1.181.563 2.57.563 3.75 0" /></svg>;
 const CreditCardIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>;
 const GlobeAltIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A11.953 11.953 0 0112 16.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12a8.959 8.959 0 01-2.284 5.253" /></svg>;
+const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>;
+const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>;
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -27,28 +29,12 @@ const getStartOfWeek = (date: Date) => {
 };
 
 const getWeekNumber = (d: Date): number => {
-    // Copy date so don't modify original
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    // Set to nearest Thursday: current date + 4 - current day number
-    // Make Sunday's day number 7
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    // Get first day of year
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    // Calculate full weeks to nearest Thursday
     const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    // Return week number
     return weekNo;
 };
-
-const areDatesSame = (d1: Date, d2: Date, mode: ViewMode) => {
-    if (mode === 'day') return getDayKey(d1) === getDayKey(d2);
-    if (mode === 'month') return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
-    if (mode === 'year') return d1.getFullYear() === d2.getFullYear();
-    if (mode === 'week') {
-        return d1.getFullYear() === d2.getFullYear() && getWeekNumber(d1) === getWeekNumber(d2);
-    }
-    return false;
-}
 
 // Fix: Moved getTransactionDescription outside the component to resolve scope issues.
 // It is now a pure helper function that receives products and contacts as arguments.
@@ -69,69 +55,53 @@ const SalesScreen: React.FC = () => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [timelineTitle, setTimelineTitle] = useState('');
     
-    const timelineRef = useRef<HTMLDivElement>(null);
-    const activeItemRef = useRef<HTMLButtonElement>(null);
-
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
     const canAddSale = products.length > 0;
 
     const timelineItems = useMemo(() => {
         const items = [];
-        const today = new Date();
+        const centerDate = new Date(currentDate);
 
-        switch (viewMode) {
-            case 'day':
-                for (let i = -30; i <= 30; i++) {
-                    const date = new Date(today);
-                    date.setDate(today.getDate() + i);
-                    items.push({
-                        key: getDayKey(date),
-                        date: date,
-                        label: date.getDate().toString(),
-                        subLabel: date.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', ''),
-                    });
-                }
-                break;
-            case 'week':
-                const currentWeekStart = getStartOfWeek(today);
-                for (let i = -12; i <= 12; i++) {
-                    const weekStart = new Date(currentWeekStart);
-                    weekStart.setDate(currentWeekStart.getDate() + i * 7);
-                    items.push({
-                        key: getDayKey(weekStart),
-                        date: weekStart,
-                        label: getWeekNumber(weekStart).toString(),
-                        subLabel: 'Semana',
-                    });
-                }
-                break;
-            case 'month':
-                for (let i = -12; i <= 12; i++) {
-                    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        for (let i = -2; i <= 2; i++) {
+            const date = new Date(centerDate);
+            let key: string;
+            let label: string;
+            let subLabel: string | undefined;
+
+            switch (viewMode) {
+                case 'day':
+                    date.setDate(centerDate.getDate() + i);
+                    key = getDayKey(date);
+                    label = date.getDate().toString();
+                    subLabel = date.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+                    break;
+                case 'week':
+                    date.setDate(centerDate.getDate() + i * 7);
+                    const weekStart = getStartOfWeek(date);
+                    key = getDayKey(weekStart);
+                    label = `Sem ${getWeekNumber(weekStart)}`;
+                    subLabel = undefined;
+                    break;
+                case 'month':
+                    date.setMonth(centerDate.getMonth() + i, 1);
+                    key = `${date.getFullYear()}-${date.getMonth()}`;
                     const monthLabel = date.toLocaleDateString('es-ES', { month: 'short' });
-                    items.push({
-                        key: `${date.getFullYear()}-${date.getMonth()}`,
-                        date: date,
-                        label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1).replace('.', ''),
-                        subLabel: date.getFullYear().toString(),
-                    });
-                }
-                break;
-            case 'year':
-                for (let i = -5; i <= 5; i++) {
-                    const date = new Date(today.getFullYear() + i, 0, 1);
-                    items.push({
-                        key: date.getFullYear().toString(),
-                        date: date,
-                        label: date.getFullYear().toString(),
-                        subLabel: 'Año',
-                    });
-                }
-                break;
+                    label = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1).replace('.', '');
+                    subLabel = undefined;
+                    break;
+                case 'year':
+                    date.setFullYear(centerDate.getFullYear() + i);
+                    key = date.getFullYear().toString();
+                    label = date.getFullYear().toString();
+                    subLabel = undefined;
+                    break;
+            }
+
+            items.push({ key, date, label, subLabel });
         }
         return items;
-    }, [viewMode]);
+    }, [viewMode, currentDate]);
 
     useEffect(() => {
         let title = '';
@@ -151,16 +121,6 @@ const SalesScreen: React.FC = () => {
         }
         setTimelineTitle(title);
     }, [currentDate, viewMode]);
-
-    useEffect(() => {
-        if (activeItemRef.current) {
-            activeItemRef.current.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'center',
-                block: 'nearest'
-            });
-        }
-    }, [currentDate, viewMode, timelineItems]);
 
     const { filteredAndGroupedTransactions, periodTotal } = useMemo(() => {
         let startDate: Date, endDate: Date;
@@ -213,8 +173,6 @@ const SalesScreen: React.FC = () => {
             .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
             .map(date => ({
                 date,
-                // Fix: Corrected the transaction sort logic. The original code was syntactically incorrect,
-                // attempting to call methods on wrong types and causing multiple errors.
                 transactions: groups[date].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
             }));
         
@@ -234,50 +192,78 @@ const SalesScreen: React.FC = () => {
         Transferencia: <GlobeAltIcon />,
     };
 
+    const handleDateChange = (direction: 'prev' | 'next') => {
+        const newDate = new Date(currentDate);
+        const step = direction === 'prev' ? -1 : 1;
+
+        switch (viewMode) {
+            case 'day':
+                newDate.setDate(newDate.getDate() + step);
+                break;
+            case 'week':
+                newDate.setDate(newDate.getDate() + (step * 7));
+                break;
+            case 'month':
+                newDate.setMonth(newDate.getMonth() + step);
+                break;
+            case 'year':
+                newDate.setFullYear(newDate.getFullYear() + step);
+                break;
+        }
+        setCurrentDate(newDate);
+    };
+
     return (
         <div className="pb-20">
-            <header className="p-4 bg-yellow-400 dark:bg-yellow-600 sticky top-0 z-20 shadow-md">
+            <header className="p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-20 shadow-sm">
                <div className="flex justify-between items-center">
-                  <h1 className="text-xl font-bold text-yellow-900 dark:text-white">{companyInfo.name}</h1>
-                  <div className="relative">
-                      <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-yellow-500/50 transition-colors">
-                          <CalendarIcon className="w-6 h-6 text-yellow-900 dark:text-white" />
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{companyInfo.name}</h1>
+                        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{timelineTitle}</h2>
+                    </div>
+                  <div className="flex items-center gap-1">
+                      <button onClick={() => handleDateChange('prev')} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Anterior">
+                          <ChevronLeftIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                       </button>
-                      {isFilterOpen && (
-                          <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
-                              {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
-                                  <button
-                                      key={mode}
-                                      onClick={() => { setViewMode(mode); setIsFilterOpen(false); setCurrentDate(new Date())}}
-                                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
-                                  >
-                                      {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
-                                  </button>
-                              ))}
-                          </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                          {timelineItems.map((item, index) => {
+                              const isActive = index === 2;
+                              return (
+                                 <button 
+                                   key={item.key}
+                                   onClick={() => setCurrentDate(item.date)}
+                                   className={`flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg w-16 h-16 transition-colors duration-200 ${
+                                      isActive ? 'bg-green-100 text-green-600 dark:bg-slate-700 dark:text-green-400' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                                   }`}
+                                 >
+                                   {item.subLabel && <span className={`text-xs font-semibold uppercase ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>{item.subLabel}</span>}
+                                   <span className={`text-xl font-bold ${isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-800 dark:text-slate-100'}`}>{item.label}</span>
+                                 </button>
+                              )
+                          })}
+                      </div>
+                       <button onClick={() => handleDateChange('next')} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Siguiente">
+                           <ChevronRightIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                       </button>
+                      <div className="relative">
+                          <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                              <CalendarIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+                          </button>
+                          {isFilterOpen && (
+                              <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
+                                  {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
+                                      <button
+                                          key={mode}
+                                          onClick={() => { setViewMode(mode); setIsFilterOpen(false); setCurrentDate(new Date())}}
+                                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
+                                      >
+                                          {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
+                                      </button>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
                   </div>
-               </div>
-                <div className="text-center mt-3 mb-2">
-                    <h2 className="text-sm font-bold text-yellow-800 dark:text-yellow-100 uppercase tracking-wide">{timelineTitle}</h2>
-                </div>
-               <div ref={timelineRef} className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                    {timelineItems.map(item => {
-                        const isActive = areDatesSame(item.date, currentDate, viewMode);
-                        return (
-                           <button 
-                             key={item.key}
-                             ref={isActive ? activeItemRef : null}
-                             onClick={() => setCurrentDate(item.date)}
-                             className={`flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg w-16 h-16 transition-colors duration-200 ${
-                                isActive ? 'bg-white shadow-md dark:bg-slate-800' : 'bg-transparent'
-                             }`}
-                           >
-                             <span className={`text-xs font-semibold uppercase ${isActive ? 'text-yellow-600 dark:text-yellow-400' : 'text-yellow-800 dark:text-yellow-200'}`}>{item.subLabel}</span>
-                             <span className={`text-xl font-bold ${isActive ? 'text-yellow-800 dark:text-white' : 'text-white'}`}>{item.label}</span>
-                           </button>
-                        )
-                    })}
                </div>
             </header>
             
@@ -302,7 +288,6 @@ const SalesScreen: React.FC = () => {
                               className="flex-grow text-left"
                               aria-label={`Ver detalles de la venta #${t.invoiceNumber}`}
                             >
-                                {/* Fix: Pass products and contacts to the helper function to resolve scope issues. */}
                                 <p className="font-semibold text-slate-800 dark:text-slate-100">{getTransactionDescription(t, products, contacts)}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
                                     {new Date(t.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
