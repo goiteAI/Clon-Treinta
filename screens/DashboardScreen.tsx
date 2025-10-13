@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import TopSoldProductsModal from '../components/TopSoldProductsModal';
-import AIAssistant from '../components/AIAssistant';
 import type { Transaction } from '../types';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
@@ -154,7 +153,6 @@ const DashboardScreen: React.FC = () => {
                  <p>No hay ventas registradas para este período.</p>
              </div>
         )}
-        <AIAssistant />
       </div>
 
       {isTopSoldModalOpen && <TopSoldProductsModal onClose={() => setIsTopSoldModalOpen(false)} transactions={dashboardData.filteredTransactions} periodTitle={periodTitles[timePeriod]} />}

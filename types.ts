@@ -94,9 +94,6 @@ export interface AppContextType {
   addContact: (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => Promise<void>;
   updateContact: (contact: Contact) => Promise<void>;
   deleteContact: (contactId: string) => Promise<void>;
-  // Fix: Add login and signup to the context type to resolve errors in AuthScreen.
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
   updateCompanyInfo: (info: CompanyInfo) => Promise<void>;
   addPayment: (transactionId: string, amount: number) => Promise<void>;
   updatePayment: (transactionId: string, paymentIndex: number, newAmount: number) => Promise<void>;

@@ -310,19 +310,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       saveData('transactions', updatedTransactions, setTransactions);
   };
 
-  // Fix: Add dummy login/signup functions to satisfy AuthScreen component, which is not fully integrated.
-  const login = async (email: string, password: string) => {
-    console.warn("Login functionality is not implemented in demo mode.", { email });
-    // This is a placeholder. The app doesn't have a user system in demo mode.
-    return Promise.resolve();
-  };
-
-  const signup = async (name: string, email: string, password: string) => {
-    console.warn("Signup functionality is not implemented in demo mode.", { name, email });
-    // This is a placeholder.
-    return Promise.resolve();
-  };
-
   // --- Company Info ---
   const updateCompanyInfo = async (info: CompanyInfo) => {
       saveData('companyInfo', info, setCompanyInfo);
@@ -464,9 +451,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addContact,
     updateContact,
     deleteContact,
-    // Fix: Add login and signup to the context value.
-    login,
-    signup,
     updateCompanyInfo,
     addPayment,
     updatePayment,
