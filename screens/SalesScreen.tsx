@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-// Fix: Import Product and Contact types to be used in the new getTransactionDescription helper function.
 import type { Transaction, Product, Contact } from '../types';
 import InvoiceModal from '../components/InvoiceModal';
 import AddSaleModal from '../components/AddSaleModal';
+import SaleActionsModal from '../components/SaleActionsModal';
+import ConfirmationModal from '../components/ConfirmationModal';
+
 
 // --- ICONS ---
 const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -11,11 +13,17 @@ const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18M12 13.5h.008v.008H12v-.008z" />
     </svg>
 );
+const FunnelIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+    </svg>
+);
 const BanknotesIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.75A.75.75 0 013 4.5h.75m0 0H21M12 12.75h.008v.008H12v-.008z" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21a3.375 3.375 0 003.375-3.375V12.188c0-.775.625-1.406 1.406-1.406h4.438c.781 0 1.406.631 1.406 1.406v5.438a3.375 3.375 0 003.375 3.375M9 12.188c1.181.563 2.57.563 3.75 0" /></svg>;
 const CreditCardIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>;
 const GlobeAltIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A11.953 11.953 0 0112 16.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12a8.959 8.959 0 01-2.284 5.253" /></svg>;
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
+type PaymentMethodFilter = 'all' | 'Efectivo' | 'Crédito' | 'Transferencia';
 
 // --- DATE UTILITY FUNCTIONS ---
 const getDayKey = (date: Date) => date.toISOString().split('T')[0];
@@ -34,8 +42,6 @@ const getWeekNumber = (d: Date): number => {
     return weekNo;
 };
 
-// Fix: Moved getTransactionDescription outside the component to resolve scope issues.
-// It is now a pure helper function that receives products and contacts as arguments.
 const getTransactionDescription = (transaction: Transaction, products: Product[], contacts: Contact[]) => {
     const contactName = transaction.contactId ? contacts.find(c => c.id === transaction.contactId)?.name : null;
     if(contactName) return `Venta a ${contactName}`;
@@ -43,21 +49,75 @@ const getTransactionDescription = (transaction: Transaction, products: Product[]
     return productNames.length > 40 ? productNames.substring(0, 40) + '...' : productNames || `Venta #${transaction.invoiceNumber}`;
 };
 
+const FilterPill: React.FC<{
+    onClick: () => void;
+    isActive: boolean;
+    children: React.ReactNode;
+}> = ({ onClick, isActive, children }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
+            isActive
+                ? 'bg-green-500 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
+        }`}
+    >
+        {children}
+    </button>
+);
+
+
 const SalesScreen: React.FC = () => {
-    const { transactions, products, contacts, companyInfo } = useAppContext();
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const { transactions, products, contacts, companyInfo, deleteTransaction } = useAppContext();
+    const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+    const [saleToEdit, setSaleToEdit] = useState<Transaction | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [saleForActions, setSaleForActions] = useState<Transaction | null>(null);
+    const [saleToDelete, setSaleToDelete] = useState<Transaction | null>(null);
 
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isCalendarFilterOpen, setIsCalendarFilterOpen] = useState(false);
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
     const [timelineTitle, setTimelineTitle] = useState('');
     const activeItemRef = useRef<HTMLButtonElement>(null);
     const [initialRenderDate] = useState(new Date());
+
+    // Filter states
+    const [filterPaymentMethod, setFilterPaymentMethod] = useState<PaymentMethodFilter>('all');
+    const [filterContactId, setFilterContactId] = useState<string>('all');
     
     const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
     
     const canAddSale = products.length > 0;
+    const filtersAreActive = filterPaymentMethod !== 'all' || filterContactId !== 'all';
+
+    const handleClearFilters = () => {
+        setFilterPaymentMethod('all');
+        setFilterContactId('all');
+    };
+
+    const handleOpenAddSaleModal = () => {
+        setSaleToEdit(null);
+        setIsSaleModalOpen(true);
+    };
+
+    const handleOpenEditSaleModal = (transaction: Transaction) => {
+        setSaleToEdit(transaction);
+        setIsSaleModalOpen(true);
+    };
+
+    const handleCloseSaleModal = () => {
+        setIsSaleModalOpen(false);
+        setSaleToEdit(null);
+    };
+    
+    const handleDeleteSaleConfirm = () => {
+        if (saleToDelete) {
+            deleteTransaction(saleToDelete.id);
+            setSaleToDelete(null);
+        }
+    };
 
     const isDateActive = (itemDate: Date, currentDate: Date, viewMode: ViewMode): boolean => {
         switch (viewMode) {
@@ -177,10 +237,14 @@ const SalesScreen: React.FC = () => {
                 break;
         }
 
-        const filtered = transactions.filter(t => {
-            const tDate = new Date(t.date);
-            return tDate >= startDate && tDate <= endDate;
-        });
+        const filtered = transactions
+            .filter(t => {
+                const tDate = new Date(t.date);
+                return tDate >= startDate && tDate <= endDate;
+            })
+            .filter(t => filterPaymentMethod === 'all' || t.paymentMethod === filterPaymentMethod)
+            .filter(t => filterContactId === 'all' || t.contactId === filterContactId);
+
 
         const periodTotal = filtered.reduce((sum, t) => sum + t.totalAmount, 0);
 
@@ -202,7 +266,7 @@ const SalesScreen: React.FC = () => {
         
         return { filteredAndGroupedTransactions, periodTotal };
 
-    }, [transactions, currentDate, viewMode]);
+    }, [transactions, currentDate, viewMode, filterPaymentMethod, filterContactId]);
 
     const formatDateGroup = (dateString: string) => {
         const date = new Date(dateString);
@@ -248,31 +312,77 @@ const SalesScreen: React.FC = () => {
                                 })}
                             </div>
                         </div>
-                        <div className="relative">
-                            <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                                <CalendarIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+                         <div className="flex items-center gap-1">
+                            <button onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative">
+                                <FunnelIcon className={`w-6 h-6 transition-colors ${filtersAreActive ? 'text-green-500' : 'text-slate-500 dark:text-slate-400'}`} />
+                                {filtersAreActive && <span className="absolute top-1 right-1 block w-2 h-2 bg-green-500 rounded-full"></span>}
                             </button>
-                            {isFilterOpen && (
-                                <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
-                                    {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
-                                        <button
-                                            key={mode}
-                                            onClick={() => { setViewMode(mode); setIsFilterOpen(false); setCurrentDate(new Date())}}
-                                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
-                                        >
-                                            {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="relative">
+                                <button onClick={() => setIsCalendarFilterOpen(!isCalendarFilterOpen)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    <CalendarIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+                                </button>
+                                {isCalendarFilterOpen && (
+                                    <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-30 dark:bg-slate-700">
+                                        {(['day', 'week', 'month', 'year'] as ViewMode[]).map(mode => (
+                                            <button
+                                                key={mode}
+                                                onClick={() => { setViewMode(mode); setIsCalendarFilterOpen(false); setCurrentDate(new Date())}}
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-600"
+                                            >
+                                                {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </header>
+
+            <div className={`absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800/95 dark:backdrop-blur-sm shadow-lg border-b dark:border-slate-700 transition-transform duration-300 ease-in-out ${isFilterPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+                <div className="p-4 space-y-4 max-w-screen-md mx-auto">
+                    <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Método de Pago</h3>
+                        <div className="flex flex-wrap gap-2">
+                           <FilterPill onClick={() => setFilterPaymentMethod('all')} isActive={filterPaymentMethod === 'all'}>Todos</FilterPill>
+                           <FilterPill onClick={() => setFilterPaymentMethod('Efectivo')} isActive={filterPaymentMethod === 'Efectivo'}>Efectivo</FilterPill>
+                           <FilterPill onClick={() => setFilterPaymentMethod('Crédito')} isActive={filterPaymentMethod === 'Crédito'}>Crédito</FilterPill>
+                           <FilterPill onClick={() => setFilterPaymentMethod('Transferencia')} isActive={filterPaymentMethod === 'Transferencia'}>Transferencia</FilterPill>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Contacto</h3>
+                        <select
+                            value={filterContactId}
+                            onChange={e => setFilterContactId(e.target.value)}
+                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="all">Todos los contactos</option>
+                            {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="flex justify-between items-center border-t pt-3 mt-3 dark:border-slate-700/50">
+                        <button 
+                          onClick={handleClearFilters}
+                          className="text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-50 disabled:pointer-events-none"
+                          disabled={!filtersAreActive}
+                        >
+                          Limpiar Filtros
+                        </button>
+                        <button 
+                           onClick={() => setIsFilterPanelOpen(false)} 
+                           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors text-sm font-semibold"
+                        >
+                           Hecho
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <div className="p-4 space-y-6">
                 <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Balance</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Balance {filtersAreActive && '(filtrado)'}</p>
                     <p className="text-3xl font-bold text-green-600">{formatCurrency(periodTotal)}</p>
                 </div>
 
@@ -287,18 +397,27 @@ const SalesScreen: React.FC = () => {
                               {paymentMethodIcons[t.paymentMethod]}
                             </div>
                             <button 
-                              onClick={() => setSelectedTransaction(t)} 
-                              className="flex-grow text-left"
-                              aria-label={`Ver detalles de la venta #${t.invoiceNumber}`}
+                              onClick={() => setSaleForActions(t)}
+                              className="flex-grow text-left flex justify-between items-center"
+                              aria-label={`Acciones para la venta #${t.invoiceNumber}`}
                             >
-                                <p className="font-semibold text-slate-800 dark:text-slate-100">{getTransactionDescription(t, products, contacts)}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    {new Date(t.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                </p>
+                                <div>
+                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{getTransactionDescription(t, products, contacts)}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        {new Date(t.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(t.totalAmount)}</p>
+                                </div>
                             </button>
-                            <div className="text-right">
-                              <p className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(t.totalAmount)}</p>
-                            </div>
+                             <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedTransaction(t); }}
+                                className="ml-2 px-3 py-1.5 text-sm bg-green-100 text-green-700 font-semibold rounded-full hover:bg-green-200 transition-colors dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900"
+                                aria-label={`Ver factura de la venta #${t.invoiceNumber}`}
+                            >
+                                Factura
+                            </button>
                         </li>
                       ))}
                     </ul>
@@ -306,13 +425,13 @@ const SalesScreen: React.FC = () => {
                 </div>
               )) : (
                  <div className="text-center text-slate-500 py-10 bg-slate-50 rounded-lg dark:bg-slate-800/50 dark:text-slate-400">
-                     <p>No hay ventas registradas para este período.</p>
+                     <p>No hay ventas que coincidan con tus filtros para este período.</p>
                  </div>
               )}
             </div>
 
             <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleOpenAddSaleModal}
                 disabled={!canAddSale}
                 className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400 disabled:transform-none"
                 aria-label={canAddSale ? "Registrar nueva venta" : "Añada productos para poder registrar ventas"}
@@ -323,8 +442,31 @@ const SalesScreen: React.FC = () => {
                 </svg>
             </button>
 
-            {isAddModalOpen && <AddSaleModal onClose={() => setIsAddModalOpen(false)} />}
+            {isSaleModalOpen && <AddSaleModal transactionToEdit={saleToEdit} onClose={handleCloseSaleModal} />}
             {selectedTransaction && <InvoiceModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} />}
+            {saleForActions && (
+                <SaleActionsModal
+                    transaction={saleForActions}
+                    onClose={() => setSaleForActions(null)}
+                    onEdit={() => {
+                        handleOpenEditSaleModal(saleForActions);
+                        setSaleForActions(null);
+                    }}
+                    onDelete={() => {
+                        setSaleToDelete(saleForActions);
+                        setSaleForActions(null);
+                    }}
+                />
+            )}
+            {saleToDelete && (
+                <ConfirmationModal
+                    isOpen={!!saleToDelete}
+                    onClose={() => setSaleToDelete(null)}
+                    onConfirm={handleDeleteSaleConfirm}
+                    title="Confirmar Eliminación"
+                    message={`¿Estás seguro de que quieres eliminar la venta #${saleToDelete.invoiceNumber}? Se restaurará el stock de los productos vendidos. Esta acción no se puede deshacer.`}
+                />
+            )}
         </div>
     );
 };
