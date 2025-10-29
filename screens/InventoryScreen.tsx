@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Product, StockHistoryEntry, StockInEntry } from '../types';
@@ -365,11 +364,6 @@ const InventoryScreen: React.FC = () => {
     const handleToggleExpand = (productId: string) => {
         setExpandedProductId(prevId => (prevId === productId ? null : productId));
     };
-
-    const handleActionClick = (e: React.MouseEvent | React.KeyboardEvent, action: () => void) => {
-        e.stopPropagation();
-        action();
-    };
     
     const reasonToText = (reason: StockHistoryEntry['reason']) => {
         const map = {
@@ -421,32 +415,38 @@ const InventoryScreen: React.FC = () => {
 
                             return (
                                 <div key={p.id} className="bg-white rounded-lg shadow-sm dark:bg-slate-800 transition-all duration-300">
-                                    <button 
-                                        onClick={() => handleToggleExpand(p.id)}
-                                        className="w-full p-3 flex items-center gap-4 text-left"
-                                        aria-expanded={isExpanded}
-                                        aria-controls={`product-history-${p.id}`}
-                                    >
+                                    <div className="w-full p-3 flex items-center gap-4 text-left">
                                         <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-md object-cover bg-slate-100 flex-shrink-0"/>
-                                        <div className="flex-1">
+                                        <div 
+                                            className="flex-1 cursor-pointer"
+                                            onClick={() => handleToggleExpand(p.id)}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') handleToggleExpand(p.id)}}
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`product-history-${p.id}`}
+                                        >
                                             <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
                                             <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(p.price)}</p>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <div 
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={(e) => handleActionClick(e, () => setStockEditingProduct(p))}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActionClick(e, () => setStockEditingProduct(p)) }}
-                                                className="text-right hover:bg-slate-100 p-2 rounded-md transition-colors dark:hover:bg-slate-700 cursor-pointer"
-                                                aria-label={`Editar stock de ${p.name}`}
-                                            >
-                                                <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
-                                                <p className="text-xs text-slate-400">en stock</p>
-                                            </div>
+                                        <button
+                                            onClick={() => setStockEditingProduct(p)}
+                                            className="text-right hover:bg-slate-100 p-2 rounded-md transition-colors dark:hover:bg-slate-700"
+                                            aria-label={`Editar stock de ${p.name}`}
+                                        >
+                                            <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
+                                            <p className="text-xs text-slate-400">en stock</p>
+                                        </button>
+                                        <button
+                                            onClick={() => handleToggleExpand(p.id)}
+                                            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            aria-label={isExpanded ? "Colapsar historial" : "Expandir historial"}
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`product-history-${p.id}`}
+                                        >
                                             <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
-                                        </div>
-                                    </button>
+                                        </button>
+                                    </div>
                                      {isExpanded && (
                                         <div id={`product-history-${p.id}`} className="px-4 pb-4">
                                             <div className="border-t pt-4 dark:border-slate-700">
@@ -474,14 +474,14 @@ const InventoryScreen: React.FC = () => {
 
                                                 <div className="mt-4 pt-4 border-t border-dashed dark:border-slate-600 flex items-center justify-end gap-4">
                                                     <button 
-                                                        onClick={(e) => handleActionClick(e, () => handleOpenEditModal(p))}
+                                                        onClick={() => handleOpenEditModal(p)}
                                                         className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors" aria-label={`Editar ${p.name}`}
                                                     >
                                                         <PencilIcon className="w-4 h-4"/>
                                                         <span>Editar</span>
                                                     </button>
                                                     <button 
-                                                        onClick={(e) => handleActionClick(e, () => setProductToDelete(p))}
+                                                        onClick={() => setProductToDelete(p)}
                                                         className="flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors" aria-label={`Eliminar ${p.name}`}
                                                     >
                                                         <TrashIcon className="w-4 h-4"/>

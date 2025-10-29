@@ -107,7 +107,7 @@ export interface AppContextType {
   updateStockInEntry: (entry: StockInEntry) => Promise<void>;
   deleteStockInEntry: (entryId: string) => Promise<void>;
   theme: 'light' | 'dark';
-  toggleTheme: () => void;
+  toggleTheme: (newTheme?: 'light' | 'dark') => void;
   salesUnitCorrection: number;
   updateSalesUnitCorrection: (newCorrection: number) => Promise<void>;
   importData: (data: any) => Promise<void>;

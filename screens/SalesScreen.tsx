@@ -282,7 +282,7 @@ const SalesScreen: React.FC = () => {
 
     return (
         <div className="pb-20">
-            <header className="p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-20 shadow-sm">
+            <header className="p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-20 shadow-sm relative">
                 <div className="flex justify-between items-center gap-4">
                     <div>
                         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{companyInfo.name}</h1>
@@ -338,47 +338,46 @@ const SalesScreen: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </header>
-
-            <div className={`absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800/95 dark:backdrop-blur-sm shadow-lg border-b dark:border-slate-700 transition-transform duration-300 ease-in-out ${isFilterPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="p-4 space-y-4 max-w-screen-md mx-auto">
-                    <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Método de Pago</h3>
-                        <div className="flex flex-wrap gap-2">
-                           <FilterPill onClick={() => setFilterPaymentMethod('all')} isActive={filterPaymentMethod === 'all'}>Todos</FilterPill>
-                           <FilterPill onClick={() => setFilterPaymentMethod('Efectivo')} isActive={filterPaymentMethod === 'Efectivo'}>Efectivo</FilterPill>
-                           <FilterPill onClick={() => setFilterPaymentMethod('Crédito')} isActive={filterPaymentMethod === 'Crédito'}>Crédito</FilterPill>
-                           <FilterPill onClick={() => setFilterPaymentMethod('Transferencia')} isActive={filterPaymentMethod === 'Transferencia'}>Transferencia</FilterPill>
+                <div className={`absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800/95 dark:backdrop-blur-sm shadow-lg border-b dark:border-slate-700 transition-transform duration-300 ease-in-out ${isFilterPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+                    <div className="p-4 space-y-4 max-w-screen-md mx-auto">
+                        <div>
+                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Método de Pago</h3>
+                            <div className="flex flex-wrap gap-2">
+                               <FilterPill onClick={() => setFilterPaymentMethod('all')} isActive={filterPaymentMethod === 'all'}>Todos</FilterPill>
+                               <FilterPill onClick={() => setFilterPaymentMethod('Efectivo')} isActive={filterPaymentMethod === 'Efectivo'}>Efectivo</FilterPill>
+                               <FilterPill onClick={() => setFilterPaymentMethod('Crédito')} isActive={filterPaymentMethod === 'Crédito'}>Crédito</FilterPill>
+                               <FilterPill onClick={() => setFilterPaymentMethod('Transferencia')} isActive={filterPaymentMethod === 'Transferencia'}>Transferencia</FilterPill>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Contacto</h3>
+                            <select
+                                value={filterContactId}
+                                onChange={e => setFilterContactId(e.target.value)}
+                                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            >
+                                <option value="all">Todos los contactos</option>
+                                {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex justify-between items-center border-t pt-3 mt-3 dark:border-slate-700/50">
+                            <button 
+                              onClick={handleClearFilters}
+                              className="text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-50 disabled:pointer-events-none"
+                              disabled={!filtersAreActive}
+                            >
+                              Limpiar Filtros
+                            </button>
+                            <button 
+                               onClick={() => setIsFilterPanelOpen(false)} 
+                               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors text-sm font-semibold"
+                            >
+                               Hecho
+                            </button>
                         </div>
                     </div>
-                    <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Contacto</h3>
-                        <select
-                            value={filterContactId}
-                            onChange={e => setFilterContactId(e.target.value)}
-                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="all">Todos los contactos</option>
-                            {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="flex justify-between items-center border-t pt-3 mt-3 dark:border-slate-700/50">
-                        <button 
-                          onClick={handleClearFilters}
-                          className="text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-50 disabled:pointer-events-none"
-                          disabled={!filtersAreActive}
-                        >
-                          Limpiar Filtros
-                        </button>
-                        <button 
-                           onClick={() => setIsFilterPanelOpen(false)} 
-                           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors text-sm font-semibold"
-                        >
-                           Hecho
-                        </button>
-                    </div>
                 </div>
-            </div>
+            </header>
             
             <div className="p-4 space-y-6">
                 <div className="bg-white p-4 rounded-xl shadow-sm dark:bg-slate-800">

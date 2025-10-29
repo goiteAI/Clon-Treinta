@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import TopSoldProductsModal from '../components/TopSoldProductsModal';
+import AddSaleModal from '../components/AddSaleModal';
 import type { Transaction } from '../types';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
@@ -14,9 +15,12 @@ const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ t
 );
 
 const DashboardScreen: React.FC = () => {
-  const { transactions, expenses } = useAppContext();
+  const { transactions, expenses, products } = useAppContext();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
   const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
+  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+
+  const canAddSale = products.length > 0;
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
@@ -155,6 +159,19 @@ const DashboardScreen: React.FC = () => {
         )}
       </div>
 
+      <button
+        onClick={() => setIsSaleModalOpen(true)}
+        disabled={!canAddSale}
+        className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400 disabled:transform-none z-30"
+        aria-label={canAddSale ? "Registrar nueva venta" : "Añada productos para poder registrar ventas"}
+        title={canAddSale ? "Registrar nueva venta" : "Primero debes añadir productos para poder registrar una venta."}
+      >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+      </button>
+
+      {isSaleModalOpen && <AddSaleModal transactionToEdit={null} onClose={() => setIsSaleModalOpen(false)} />}
       {isTopSoldModalOpen && <TopSoldProductsModal onClose={() => setIsTopSoldModalOpen(false)} transactions={dashboardData.filteredTransactions} periodTitle={periodTitles[timePeriod]} />}
     </div>
   );

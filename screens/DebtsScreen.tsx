@@ -24,6 +24,8 @@ const DebtsScreen: React.FC = () => {
     const [paymentToConfirm, setPaymentToConfirm] = useState<{ transaction: Transaction; amount: number } | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<{ transactionId: string; paymentIndex: number; amount: number; date: string } | null>(null);
     const [notification, setNotification] = useState<{ type: 'success' | 'paid'; message: string } | null>(null);
+    const [actionsVisibleFor, setActionsVisibleFor] = useState<string | null>(null);
+
 
     useEffect(() => {
         if (notification) {
@@ -192,6 +194,9 @@ const DebtsScreen: React.FC = () => {
                                             <ul className="space-y-1 text-sm">
                                                 {t.payments.map((payment, index) => {
                                                     const isEditing = editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index;
+                                                    const paymentKey = `${t.id}-${index}`;
+                                                    const isActionsVisible = actionsVisibleFor === paymentKey;
+
                                                     return isEditing ? (
                                                         <li key={index} className="bg-slate-50 p-2 rounded-lg dark:bg-slate-700/50">
                                                             <div className="flex items-center gap-2">
@@ -208,18 +213,30 @@ const DebtsScreen: React.FC = () => {
                                                             {paymentError && editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index && <p className="text-red-500 text-xs mt-1">{paymentError}</p>}
                                                         </li>
                                                     ) : (
-                                                        <li key={index} className="flex justify-between items-center text-slate-500 dark:text-slate-400 group p-1 rounded">
+                                                        <li key={index} 
+                                                            className="flex justify-between items-center text-slate-500 dark:text-slate-400 p-1 rounded cursor-pointer"
+                                                            onClick={() => {
+                                                                setActionsVisibleFor(isActionsVisible ? null : paymentKey);
+                                                                if (editingPaymentInfo) setEditingPaymentInfo(null);
+                                                            }}
+                                                        >
                                                             <span>{new Date(payment.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
-                                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                                                                    <button onClick={() => {
+                                                                <div className={`transition-opacity flex items-center ${isActionsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                                                    <button onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActionsVisibleFor(null);
                                                                         setEditingPaymentInfo({ transactionId: t.id, paymentIndex: index, amount: payment.amount });
                                                                         setPaymentError('');
-                                                                    }} className="text-slate-400 hover:text-blue-500 p-1">
+                                                                    }} className="text-slate-400 hover:text-blue-500 p-1" aria-label="Editar abono">
                                                                         <PencilIcon className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={() => setPaymentToDelete({ transactionId: t.id, paymentIndex: index, amount: payment.amount, date: payment.date })} className="text-slate-400 hover:text-red-500 p-1">
+                                                                    <button onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActionsVisibleFor(null);
+                                                                        setPaymentToDelete({ transactionId: t.id, paymentIndex: index, amount: payment.amount, date: payment.date })
+                                                                    }} className="text-slate-400 hover:text-red-500 p-1" aria-label="Eliminar abono">
                                                                         <TrashIcon className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
