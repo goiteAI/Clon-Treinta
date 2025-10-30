@@ -338,7 +338,7 @@ const SalesScreen: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <div className={`absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800/95 dark:backdrop-blur-sm shadow-lg border-b dark:border-slate-700 transition-transform duration-300 ease-in-out ${isFilterPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+                <div className={`absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800/95 dark:backdrop-blur-sm shadow-lg border-b dark:border-slate-700 transition-all duration-300 ease-in-out ${isFilterPanelOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}>
                     <div className="p-4 space-y-4 max-w-screen-md mx-auto">
                         <div>
                             <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Método de Pago</h3>

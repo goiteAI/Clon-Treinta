@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Product, StockHistoryEntry, StockInEntry } from '../types';
@@ -415,36 +416,30 @@ const InventoryScreen: React.FC = () => {
 
                             return (
                                 <div key={p.id} className="bg-white rounded-lg shadow-sm dark:bg-slate-800 transition-all duration-300">
-                                    <div className="w-full p-3 flex items-center gap-4 text-left">
+                                    <div className="w-full p-3 flex items-center gap-2 text-left">
                                         <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-md object-cover bg-slate-100 flex-shrink-0"/>
-                                        <div 
-                                            className="flex-1 cursor-pointer"
+                                        
+                                        <button
+                                            type="button"
                                             onClick={() => handleToggleExpand(p.id)}
-                                            role="button"
-                                            tabIndex={0}
-                                            onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') handleToggleExpand(p.id)}}
+                                            className="flex-1 flex items-center justify-between text-left p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                                             aria-expanded={isExpanded}
                                             aria-controls={`product-history-${p.id}`}
                                         >
-                                            <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(p.price)}</p>
-                                        </div>
+                                            <div>
+                                                <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400">Precio: {formatCurrency(p.price)}</p>
+                                            </div>
+                                            <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </button>
+
                                         <button
                                             onClick={() => setStockEditingProduct(p)}
-                                            className="text-right hover:bg-slate-100 p-2 rounded-md transition-colors dark:hover:bg-slate-700"
+                                            className="text-right hover:bg-slate-100 p-2 rounded-lg transition-colors dark:hover:bg-slate-700 flex-shrink-0"
                                             aria-label={`Editar stock de ${p.name}`}
                                         >
                                             <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.stock}</p>
                                             <p className="text-xs text-slate-400">en stock</p>
-                                        </button>
-                                        <button
-                                            onClick={() => handleToggleExpand(p.id)}
-                                            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
-                                            aria-label={isExpanded ? "Colapsar historial" : "Expandir historial"}
-                                            aria-expanded={isExpanded}
-                                            aria-controls={`product-history-${p.id}`}
-                                        >
-                                            <ChevronDownIcon className={`h-5 w-5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
                                         </button>
                                     </div>
                                      {isExpanded && (
