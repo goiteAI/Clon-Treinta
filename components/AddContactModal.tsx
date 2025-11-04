@@ -44,13 +44,13 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ onClose, contactToEdi
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col dark:bg-slate-800">
                     <div className="p-4 border-b dark:border-slate-700">
-                        <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">{isEditMode ? 'Editar Contacto' : 'Añadir Contacto'}</h2>
+                        <h2 className="text-xl font-bold text-center text-slate-800 dark:text-slate-100">{isEditMode ? 'Editar Cliente' : 'Añadir Cliente'}</h2>
                     </div>
                     <form onSubmit={handleSubmit}>
                         <div className="p-6 space-y-4">
                             <input
                                 type="text"
-                                placeholder="Nombre del contacto"
+                                placeholder="Nombre del cliente"
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
@@ -89,7 +89,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ onClose, contactToEdi
                     onClose={() => setIsConfirmingDelete(false)}
                     onConfirm={handleDelete}
                     title="Confirmar Eliminación"
-                    message={`¿Estás seguro de que quieres eliminar al contacto "${contactToEdit.name}"? Esta acción no se puede deshacer.`}
+                    message={`¿Estás seguro de que quieres eliminar al cliente "${contactToEdit.name}"? Esta acción no se puede deshacer.`}
                 />
             )}
         </>

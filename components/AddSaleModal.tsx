@@ -298,7 +298,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                             />
                         </div>
                         <select value={contactId} onChange={e => setContactId(e.target.value)} className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent self-end dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                            <option value="">Cliente Ocasional</option>
+                            <option value="">Venta sin Cliente</option>
                             {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>

@@ -350,13 +350,13 @@ const SalesScreen: React.FC = () => {
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Contacto</h3>
+                            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Cliente</h3>
                             <select
                                 value={filterContactId}
                                 onChange={e => setFilterContactId(e.target.value)}
                                 className="w-full p-2 border rounded-md focus:ring-2 focus:ring-green-500 bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             >
-                                <option value="all">Todos los contactos</option>
+                                <option value="all">Todos los clientes</option>
                                 {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>

@@ -26,7 +26,7 @@ const NavItem: React.FC<NavItemProps> = ({ page, title, icon, currentPage, setCu
 };
 
 const HomeIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={2} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.121 0l9.045 9.045M4.5 12.75v6a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25v-6" />
   </svg>
 );
@@ -77,7 +77,7 @@ const BottomNav: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => v
     { page: 'debts', title: 'Deudas', icon: <CashIcon /> },
     { page: 'inventory', title: 'Inventario', icon: <InboxIcon /> },
     { page: 'expenses', title: 'Gastos', icon: <ReceiptPercentIcon /> },
-    { page: 'contacts', title: 'Contactos', icon: <UserGroupIcon /> },
+    { page: 'clients', title: 'Clientes', icon: <UserGroupIcon /> },
     { page: 'settings', title: 'Ajustes', icon: <CogIcon /> },
   ];
 

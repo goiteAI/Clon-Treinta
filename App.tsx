@@ -7,7 +7,7 @@ import DashboardScreen from './screens/DashboardScreen';
 import SalesScreen from './screens/SalesScreen';
 import InventoryScreen from './screens/InventoryScreen';
 import ExpensesScreen from './screens/ExpensesScreen';
-import ContactsScreen from './screens/ContactsScreen';
+import ClientsScreen from './screens/ContactsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebtsScreen from './screens/DebtsScreen';
 
@@ -24,8 +24,8 @@ const MainApp: React.FC = () => {
         return <InventoryScreen />;
       case 'expenses':
         return <ExpensesScreen />;
-      case 'contacts':
-        return <ContactsScreen />;
+      case 'clients':
+        return <ClientsScreen />;
        case 'settings':
         return <SettingsScreen />;
        case 'debts':
