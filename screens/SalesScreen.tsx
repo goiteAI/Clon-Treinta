@@ -75,7 +75,7 @@ const SalesScreen: React.FC = () => {
     const [saleForActions, setSaleForActions] = useState<Transaction | null>(null);
     const [saleToDelete, setSaleToDelete] = useState<Transaction | null>(null);
 
-    const [viewMode, setViewMode] = useState<ViewMode>('day');
+    const [viewMode, setViewMode] = useState<ViewMode>('week');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCalendarFilterOpen, setIsCalendarFilterOpen] = useState(false);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -390,7 +390,9 @@ const SalesScreen: React.FC = () => {
                   <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-1">{formatDateGroup(group.date)}</h2>
                   <div className="bg-white rounded-lg shadow-sm dark:bg-slate-800 overflow-hidden">
                     <ul className="divide-y dark:divide-slate-700/50">
-                      {group.transactions.map(t => (
+                      {group.transactions.map(t => {
+                        const totalItems = t.items.reduce((sum, item) => sum + item.quantity, 0);
+                        return (
                         <li key={t.id} className="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <div className="flex-shrink-0">
                               {paymentMethodIcons[t.paymentMethod]}
@@ -403,7 +405,7 @@ const SalesScreen: React.FC = () => {
                                 <div>
                                     <p className="font-semibold text-slate-800 dark:text-slate-100">{getTransactionDescription(t, products, contacts)}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        {new Date(t.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                        {totalItems} {totalItems === 1 ? 'producto' : 'productos'}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -418,7 +420,7 @@ const SalesScreen: React.FC = () => {
                                 Factura
                             </button>
                         </li>
-                      ))}
+                      )})}
                     </ul>
                   </div>
                 </div>

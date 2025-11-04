@@ -15,6 +15,13 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+
 const DebtsScreen: React.FC = () => {
     const { transactions, contacts, addPayment, updatePayment, deletePayment } = useAppContext();
     const [addingPaymentTo, setAddingPaymentTo] = useState<string | null>(null);
@@ -24,7 +31,7 @@ const DebtsScreen: React.FC = () => {
     const [paymentToConfirm, setPaymentToConfirm] = useState<{ transaction: Transaction; amount: number } | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<{ transactionId: string; paymentIndex: number; amount: number; date: string } | null>(null);
     const [notification, setNotification] = useState<{ type: 'success' | 'paid'; message: string } | null>(null);
-    const [actionsVisibleFor, setActionsVisibleFor] = useState<string | null>(null);
+    const [quickPayToConfirm, setQuickPayToConfirm] = useState<{ transaction: Transaction; amount: number } | null>(null);
 
 
     useEffect(() => {
@@ -91,6 +98,15 @@ const DebtsScreen: React.FC = () => {
         setAddingPaymentTo(null);
         setPaymentAmount(0);
         setPaymentToConfirm(null);
+    };
+    
+    const handleConfirmQuickPay = () => {
+        if (!quickPayToConfirm) return;
+
+        const { transaction, amount } = quickPayToConfirm;
+        addPayment(transaction.id, amount);
+        setNotification({ type: 'paid', message: '¡Deuda completada! El cliente ha saldado su cuenta.' });
+        setQuickPayToConfirm(null);
     };
 
     const handleSavePaymentEdit = () => {
@@ -181,9 +197,19 @@ const DebtsScreen: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-lg text-red-600">{formatCurrency(amountDue)}</p>
-                                        <p className="text-xs text-slate-400">Pendiente</p>
+                                    <div className="text-right flex items-center gap-2">
+                                        <div>
+                                          <p className="font-bold text-lg text-red-600">{formatCurrency(amountDue)}</p>
+                                          <p className="text-xs text-slate-400">Pendiente</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setQuickPayToConfirm({ transaction: t, amount: amountDue })}
+                                            className="text-green-500 hover:text-green-600 p-1 rounded-full hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+                                            aria-label={`Saldar deuda de ${getContactName(t.contactId)}`}
+                                            title="Saldar deuda completa"
+                                        >
+                                            <CheckCircleIcon className="w-8 h-8"/>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -194,8 +220,6 @@ const DebtsScreen: React.FC = () => {
                                             <ul className="space-y-1 text-sm">
                                                 {t.payments.map((payment, index) => {
                                                     const isEditing = editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index;
-                                                    const paymentKey = `${t.id}-${index}`;
-                                                    const isActionsVisible = actionsVisibleFor === paymentKey;
 
                                                     return isEditing ? (
                                                         <li key={index} className="bg-slate-50 p-2 rounded-lg dark:bg-slate-700/50">
@@ -213,30 +237,18 @@ const DebtsScreen: React.FC = () => {
                                                             {paymentError && editingPaymentInfo?.transactionId === t.id && editingPaymentInfo?.paymentIndex === index && <p className="text-red-500 text-xs mt-1">{paymentError}</p>}
                                                         </li>
                                                     ) : (
-                                                        <li key={index} 
-                                                            className="flex justify-between items-center text-slate-500 dark:text-slate-400 p-1 rounded cursor-pointer"
-                                                            onClick={() => {
-                                                                setActionsVisibleFor(isActionsVisible ? null : paymentKey);
-                                                                if (editingPaymentInfo) setEditingPaymentInfo(null);
-                                                            }}
-                                                        >
+                                                        <li key={index} className="group flex justify-between items-center text-slate-500 dark:text-slate-400 p-1 rounded">
                                                             <span>{new Date(payment.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
-                                                                <div className={`transition-opacity flex items-center ${isActionsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                                                    <button onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActionsVisibleFor(null);
+                                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                                                                    <button onClick={() => {
                                                                         setEditingPaymentInfo({ transactionId: t.id, paymentIndex: index, amount: payment.amount });
                                                                         setPaymentError('');
                                                                     }} className="text-slate-400 hover:text-blue-500 p-1" aria-label="Editar abono">
                                                                         <PencilIcon className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActionsVisibleFor(null);
-                                                                        setPaymentToDelete({ transactionId: t.id, paymentIndex: index, amount: payment.amount, date: payment.date })
-                                                                    }} className="text-slate-400 hover:text-red-500 p-1" aria-label="Eliminar abono">
+                                                                    <button onClick={() => setPaymentToDelete({ transactionId: t.id, paymentIndex: index, amount: payment.amount, date: payment.date })} className="text-slate-400 hover:text-red-500 p-1" aria-label="Eliminar abono">
                                                                         <TrashIcon className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
@@ -320,6 +332,17 @@ const DebtsScreen: React.FC = () => {
                     onConfirm={handleDeletePayment}
                     title="Confirmar Eliminación"
                     message={`¿Estás seguro de que quieres eliminar el abono de ${formatCurrency(paymentToDelete.amount)} del ${new Date(paymentToDelete.date).toLocaleDateString('es-ES')}? Esta acción no se puede deshacer.`}
+                />
+            )}
+            
+            {quickPayToConfirm && (
+                <ConfirmationModal
+                    isOpen={!!quickPayToConfirm}
+                    onClose={() => setQuickPayToConfirm(null)}
+                    onConfirm={handleConfirmQuickPay}
+                    title="Saldar Deuda Completa"
+                    message={`¿Confirmas el pago completo de ${formatCurrency(quickPayToConfirm.amount)} para la deuda de ${getContactName(quickPayToConfirm.transaction.contactId)}?`}
+                    confirmText="Confirmar Pago"
                 />
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
 
@@ -6,6 +6,123 @@ interface AddSaleModalProps {
     onClose: () => void;
     transactionToEdit?: Transaction | null;
 }
+
+// Memoized component for better performance on product list rendering
+const ProductButton = React.memo(({ 
+    product, 
+    onAdd, 
+    availableStock 
+}: { 
+    product: Product, 
+    onAdd: (product: Product) => void, 
+    availableStock: number 
+}) => {
+    return (
+        <button
+            onClick={() => onAdd(product)}
+            disabled={availableStock <= 0}
+            className={`relative group flex flex-col items-center justify-start text-center border rounded-lg overflow-hidden transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800
+                ${availableStock <= 0
+                    ? 'bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed'
+                    : 'bg-white dark:bg-slate-700 hover:shadow-md hover:-translate-y-1'
+                }`}
+            aria-label={`Añadir ${product.name} al carrito`}
+        >
+            <div className="relative w-full aspect-square bg-slate-100 dark:bg-slate-600">
+                <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                />
+                {availableStock <= 0 && (
+                    <div className="absolute inset-0 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center">
+                        <span className="px-2 py-1 text-xs font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 rounded-full">
+                            Agotado
+                        </span>
+                    </div>
+                )}
+            </div>
+            <div className="p-2 w-full">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" title={product.name}>
+                    {product.name}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                    ({availableStock})
+                </p>
+            </div>
+        </button>
+    );
+});
+
+
+// Memoized and self-contained component for cart items to improve performance and state management
+const CartItem = React.memo(({
+    item,
+    product,
+    maxStock,
+    onUpdateQuantity,
+    onRemove
+}: {
+    item: TransactionItem;
+    product: Product;
+    maxStock: number;
+    onUpdateQuantity: (productId: string, quantity: number) => void;
+    onRemove: (productId: string) => void;
+}) => {
+    const [inputValue, setInputValue] = useState(String(item.quantity));
+    const inputId = `qty-input-${item.productId}`;
+
+    useEffect(() => {
+        // Sync with parent state, but only if the user is not currently editing the input.
+        // This prevents the parent re-render from overwriting the user's input.
+        if (document.activeElement?.id !== inputId) {
+            setInputValue(String(item.quantity));
+        }
+    }, [item.quantity, inputId]);
+
+    const handleBlur = () => {
+        const newQuantity = parseInt(inputValue, 10) || 0;
+        // On blur, we commit the change to the parent component.
+        onUpdateQuantity(item.productId, newQuantity);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+    };
+
+    return (
+         <li className="flex items-center gap-2 text-sm border-b pb-2 dark:border-slate-700">
+            <div className="flex-grow">
+                <p className="font-semibold">{product.name}</p>
+                <p className="text-xs text-slate-500">${item.unitPrice.toLocaleString('es-CO')} c/u</p>
+            </div>
+            <div className="flex items-center gap-1">
+                <button type="button" onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">-</button>
+                <input
+                    id={inputId}
+                    type="number"
+                    value={inputValue}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="w-12 text-center border rounded-md p-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    max={maxStock}
+                    min="0"
+                />
+                <button type="button" onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">+</button>
+            </div>
+            <p className="w-24 text-right font-medium">
+                ${(item.unitPrice * item.quantity).toLocaleString('es-CO')}
+            </p>
+            <button type="button" onClick={() => onRemove(item.productId)} className="text-red-500 hover:text-red-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+        </li>
+    );
+});
+
 
 const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit }) => {
     const { products, contacts, addTransaction, updateTransaction } = useAppContext();
@@ -16,7 +133,14 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
     const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
-    const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({});
+
+    const getAvailableStock = useCallback((product: Product) => {
+        if (!isEditMode || !transactionToEdit) {
+            return product.stock;
+        }
+        const originalItem = transactionToEdit.items.find(i => i.productId === product.id);
+        return product.stock + (originalItem?.quantity || 0);
+    }, [isEditMode, transactionToEdit, products]);
 
     useEffect(() => {
         if (isEditMode && transactionToEdit) {
@@ -36,51 +160,42 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
         }
     }, [isEditMode, transactionToEdit]);
 
-    const getAvailableStock = (product: Product) => {
-        if (!isEditMode || !transactionToEdit) {
-            return product.stock;
-        }
-        const originalItem = transactionToEdit.items.find(i => i.productId === product.id);
-        return product.stock + (originalItem?.quantity || 0);
-    };
-
-    const handleAddProduct = (product: Product) => {
+    const handleAddProduct = useCallback((product: Product) => {
         const availableStock = getAvailableStock(product);
         if (availableStock <= 0) return;
 
-        const existingItem = cart.find(item => item.productId === product.id);
-        if (existingItem) {
-            if (existingItem.quantity < availableStock) {
-                 setCart(cart.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+        setCart(currentCart => {
+            const existingItem = currentCart.find(item => item.productId === product.id);
+            if (existingItem) {
+                if (existingItem.quantity < availableStock) {
+                    return currentCart.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+                }
+                return currentCart;
+            } else {
+                return [...currentCart, { productId: product.id, quantity: 1, unitPrice: product.price }];
             }
-        } else {
-            setCart([...cart, { productId: product.id, quantity: 1, unitPrice: product.price }]);
-        }
-    };
+        });
+    }, [getAvailableStock]);
     
-    const handleUpdateQuantity = (productId: string, newQuantity: number) => {
+    const handleUpdateQuantity = useCallback((productId: string, newQuantity: number) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
         
         const availableStock = getAvailableStock(product);
         const validatedQuantity = Math.max(0, Math.min(availableStock, newQuantity));
 
-        if (validatedQuantity === 0) {
-            setCart(cart.filter(item => item.productId !== productId));
-        } else {
-            setCart(cart.map(item => item.productId === productId ? { ...item, quantity: validatedQuantity } : item));
-        }
-
-        setQuantityInputs(prev => {
-            const newState = {...prev};
-            delete newState[productId];
-            return newState;
+        setCart(currentCart => {
+            if (validatedQuantity === 0) {
+                return currentCart.filter(item => item.productId !== productId);
+            } else {
+                return currentCart.map(item => item.productId === productId ? { ...item, quantity: validatedQuantity } : item);
+            }
         });
-    };
+    }, [getAvailableStock, products]);
 
-    const handleRemoveItem = (productId: string) => {
-        setCart(cart.filter(item => item.productId !== productId));
-    };
+    const handleRemoveItem = useCallback((productId: string) => {
+        setCart(currentCart => currentCart.filter(item => item.productId !== productId));
+    }, []);
 
     const totalAmount = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
 
@@ -89,7 +204,6 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
         if (cart.length === 0) return;
 
         const date = new Date(transactionDate);
-        // Adjust for local timezone to prevent off-by-one day errors
         date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
 
         const baseTransaction = {
@@ -136,46 +250,14 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                     <div>
                         <h3 className="font-semibold text-slate-700 dark:text-slate-300">Productos Disponibles</h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
-                            {products.map(p => {
-                                const availableStock = getAvailableStock(p);
-                                return (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => handleAddProduct(p)}
-                                        disabled={availableStock <= 0}
-                                        className={`relative group flex flex-col items-center justify-start text-center border rounded-lg overflow-hidden transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800
-                                            ${availableStock <= 0
-                                                ? 'bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed'
-                                                : 'bg-white dark:bg-slate-700 hover:shadow-md hover:-translate-y-1'
-                                            }`}
-                                        aria-label={`Añadir ${p.name} al carrito`}
-                                    >
-                                        <div className="relative w-full aspect-square bg-slate-100 dark:bg-slate-600">
-                                            <img
-                                                src={p.imageUrl}
-                                                alt={p.name}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
-                                            {availableStock <= 0 && (
-                                                <div className="absolute inset-0 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center">
-                                                    <span className="px-2 py-1 text-xs font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 rounded-full">
-                                                        Agotado
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-2 w-full">
-                                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" title={p.name}>
-                                                {p.name}
-                                            </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                ({availableStock})
-                                            </p>
-                                        </div>
-                                    </button>
-                                )
-                            })}
+                            {products.map(p => (
+                                <ProductButton
+                                    key={p.id}
+                                    product={p}
+                                    onAdd={handleAddProduct}
+                                    availableStock={getAvailableStock(p)}
+                                />
+                            ))}
                         </div>
                     </div>
 
@@ -186,43 +268,15 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                               {cart.map(item => {
                                   const product = getProduct(item.productId);
                                   if (!product) return null;
-                                  const maxStock = getAvailableStock(product);
                                   return (
-                                      <li key={item.productId} className="flex items-center gap-2 text-sm border-b pb-2 dark:border-slate-700">
-                                          <div className="flex-grow">
-                                              <p className="font-semibold">{product.name}</p>
-                                              <p className="text-xs text-slate-500">${item.unitPrice.toLocaleString('es-CO')} c/u</p>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                              <button type="button" onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">-</button>
-                                              <input
-                                                  type="number"
-                                                  value={quantityInputs[item.productId] ?? item.quantity}
-                                                  onFocus={() => {
-                                                    setQuantityInputs(prev => ({ ...prev, [item.productId]: String(item.quantity) }));
-                                                  }}
-                                                  onChange={(e) => {
-                                                    setQuantityInputs(prev => ({ ...prev, [item.productId]: e.target.value }));
-                                                  }}
-                                                  onBlur={(e) => {
-                                                    const newQuantity = parseInt(e.target.value, 10) || 0;
-                                                    handleUpdateQuantity(item.productId, newQuantity);
-                                                  }}
-                                                  className="w-12 text-center border rounded-md p-1 focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                                  max={maxStock}
-                                                  min="0"
-                                              />
-                                              <button type="button" onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)} className="w-7 h-7 bg-slate-200 hover:bg-slate-300 rounded-md font-bold transition-colors dark:bg-slate-600 dark:hover:bg-slate-500">+</button>
-                                          </div>
-                                          <p className="w-24 text-right font-medium">
-                                              ${(item.unitPrice * item.quantity).toLocaleString('es-CO')}
-                                          </p>
-                                          <button type="button" onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700 transition-colors">
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                              </svg>
-                                          </button>
-                                      </li>
+                                      <CartItem
+                                        key={item.productId}
+                                        item={item}
+                                        product={product}
+                                        maxStock={getAvailableStock(product)}
+                                        onUpdateQuantity={handleUpdateQuantity}
+                                        onRemove={handleRemoveItem}
+                                      />
                                   )
                               })}
                           </ul>
