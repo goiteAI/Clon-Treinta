@@ -4,7 +4,6 @@ import type {
   AppProviderProps,
   Product,
   Transaction,
-  Expense,
   Contact,
   CompanyInfo,
   StockInEntry,
@@ -29,11 +28,6 @@ const initialTransactions: Transaction[] = [
   { id: 'trans2', invoiceNumber: 2, items: [{ productId: 'prod3', quantity: 5, unitPrice: 1800 }], totalAmount: 9000, date: new Date().toISOString(), paymentMethod: 'Crédito', contactId: 'cont2', dueDate: new Date(Date.now() + 5 * 86400000).toISOString(), payments: [{ amount: 4000, date: new Date().toISOString() }] },
 ];
 
-const initialExpenses: Expense[] = [
-  { id: 'exp1', description: 'Arriendo local', amount: 500000, category: 'Alquiler', date: new Date(Date.now() - 2 * 86400000).toISOString() },
-  { id: 'exp2', description: 'Recibo de la luz', amount: 80000, category: 'Servicios', date: new Date().toISOString() },
-];
-
 const initialCompanyInfo: CompanyInfo = {
     name: "Mi Tiendita",
     address: "Calle Falsa 123, Springfield",
@@ -49,7 +43,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(initialCompanyInfo);
     const [stockInEntries, setStockInEntries] = useState<StockInEntry[]>([]);
@@ -65,9 +58,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             const storedTransactions = localStorage.getItem('transactions');
             setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
 
-            const storedExpenses = localStorage.getItem('expenses');
-            setExpenses(storedExpenses ? JSON.parse(storedExpenses) : initialExpenses);
-            
             const storedContacts = localStorage.getItem('contacts');
             setContacts(storedContacts ? JSON.parse(storedContacts) : initialContacts);
             
@@ -88,7 +78,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             // Fallback to initial data if localStorage is corrupted
             setProducts(initialProducts);
             setTransactions(initialTransactions);
-            setExpenses(initialExpenses);
             setContacts(initialContacts);
             setCompanyInfo(initialCompanyInfo);
             setStockInEntries(initialStockInEntries);
@@ -116,7 +105,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const resetData = async () => {
       saveData('products', initialProducts, setProducts);
       saveData('transactions', initialTransactions, setTransactions);
-      saveData('expenses', initialExpenses, setExpenses);
       saveData('contacts', initialContacts, setContacts);
       saveData('companyInfo', initialCompanyInfo, setCompanyInfo);
       saveData('stockInEntries', initialStockInEntries, setStockInEntries);
@@ -131,7 +119,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     saveData('products', data.products, setProducts);
     saveData('transactions', data.transactions, setTransactions);
-    saveData('expenses', data.expenses || [], setExpenses);
     saveData('contacts', data.contacts || [], setContacts);
     saveData('companyInfo', data.companyInfo, setCompanyInfo);
     saveData('stockInEntries', data.stockInEntries || [], setStockInEntries);
@@ -274,20 +261,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     saveData('transactions', transactions.filter(t => t.id !== transactionId), setTransactions);
   };
 
-  // --- Expenses ---
-  const addExpense = async (expense: Omit<Expense, 'id'>) => {
-    const newExpense = { ...expense, id: `exp${Date.now()}`};
-    saveData('expenses', [...expenses, newExpense], setExpenses);
-  };
-
-  const updateExpense = async (expense: Expense) => {
-    saveData('expenses', expenses.map(e => e.id === expense.id ? expense : e), setExpenses);
-  };
-
-  const deleteExpense = async (expenseId: string) => {
-    saveData('expenses', expenses.filter(e => e.id !== expenseId), setExpenses);
-  };
-  
   // --- Contacts ---
   const addContact = async (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => {
       const newContact: Contact = { ...contact, id: `cont${Date.now()}`, nextInvoiceNumber: 1 };
@@ -438,16 +411,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const value: AppContextType = {
     products,
     transactions,
-    expenses,
     contacts,
     companyInfo,
     stockInEntries,
     resetData,
     addProduct,
     addTransaction,
-    addExpense,
-    updateExpense,
-    deleteExpense,
     addContact,
     updateContact,
     deleteContact,

@@ -41,14 +41,6 @@ export interface Transaction {
   payments?: Payment[];
 }
 
-export interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  category: string;
-  date: string; // ISO string
-}
-
 export interface Contact {
   id:string;
   name: string;
@@ -76,21 +68,22 @@ export interface StockInEntry {
   items: StockInEntryItem[];
 }
 
-export type Page = 'dashboard' | 'sales' | 'inventory' | 'expenses' | 'clients' | 'settings' | 'debts';
+export type Page = 'dashboard' | 'sales' | 'inventory' | 'clients' | 'settings' | 'debts' | 'chat';
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
 
 export interface AppContextType {
   products: Product[];
   transactions: Transaction[];
-  expenses: Expense[];
   contacts: Contact[];
   companyInfo: CompanyInfo;
   stockInEntries: StockInEntry[];
   resetData: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'stockHistory'>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'invoiceNumber'>) => Promise<void>;
-  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
-  updateExpense: (expense: Expense) => Promise<void>;
-  deleteExpense: (expenseId: string) => Promise<void>;
   addContact: (contact: Omit<Contact, 'id' | 'nextInvoiceNumber'>) => Promise<void>;
   updateContact: (contact: Contact) => Promise<void>;
   deleteContact: (contactId: string) => Promise<void>;

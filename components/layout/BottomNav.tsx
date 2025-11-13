@@ -43,12 +43,6 @@ const InboxIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const ReceiptPercentIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-1.5h5.25m-5.25 0h3m-3 0h-3m2.25-4.5h5.25m-5.25 0h3m-3 0h-3m2.25-4.5h5.25m-5.25 0h3m-3 0h-3m2.25-4.5h5.25m-5.25 0h3m-3 0h-3M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-  </svg>
-);
-
 const UserGroupIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.962c.57-1.023-.19-2.057-1.28-2.057a3.374 3.374 0 00-3.374 3.374c0 1.19.828 2.21 2.09 2.21A3.374 3.374 0 0010.5 15.792zM15.75 9.75a3.375 3.375 0 016.75 0 3.375 3.375 0 01-6.75 0zM4.5 19.5a3 3 0 013-3h1.5a3 3 0 013 3v.5a3 3 0 01-3 3h-1.5a3 3 0 01-3-3v-.5z" />
@@ -69,14 +63,19 @@ const CashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const SparklesIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 21.75l-.648-1.188a2.25 2.25 0 01-1.47-1.47l-1.188-.648 1.188-.648a2.25 2.25 0 011.47-1.47l.648-1.188.648 1.188a2.25 2.25 0 011.47 1.47l1.188.648-1.188.648a2.25 2.25 0 01-1.47 1.47z" />
+    </svg>
+);
+
 
 const BottomNav: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void }> = ({ currentPage, setCurrentPage }) => {
   const navItems: Omit<NavItemProps, 'currentPage' | 'setCurrentPage'>[] = [
     { page: 'dashboard', title: 'Inicio', icon: <HomeIcon /> },
     { page: 'sales', title: 'Ventas', icon: <BanknotesIcon /> },
-    { page: 'debts', title: 'Deudas', icon: <CashIcon /> },
+    { page: 'chat', title: 'Asistente', icon: <SparklesIcon /> },
     { page: 'inventory', title: 'Inventario', icon: <InboxIcon /> },
-    { page: 'expenses', title: 'Gastos', icon: <ReceiptPercentIcon /> },
     { page: 'clients', title: 'Clientes', icon: <UserGroupIcon /> },
     { page: 'settings', title: 'Ajustes', icon: <CogIcon /> },
   ];

@@ -15,7 +15,7 @@ const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ t
 );
 
 const DashboardScreen: React.FC = () => {
-  const { transactions, expenses, products } = useAppContext();
+  const { transactions, products } = useAppContext();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
   const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
@@ -53,10 +53,9 @@ const DashboardScreen: React.FC = () => {
     }
 
     const filteredTransactions = transactions.filter(t => new Date(t.date) >= startDate);
-    const filteredExpenses = expenses.filter(e => new Date(e.date) >= startDate);
 
     const totalSales = filteredTransactions.reduce((sum: number, t) => sum + t.totalAmount, 0);
-    const totalExpenses = filteredExpenses.reduce((sum: number, e) => sum + e.amount, 0);
+    const totalExpenses = 0; // Expenses feature removed
     const profit = totalSales - totalExpenses;
     
     const unitsSold = filteredTransactions.reduce((totalUnits, t) => {
@@ -76,7 +75,7 @@ const DashboardScreen: React.FC = () => {
       salesByPaymentMethod,
       filteredTransactions,
     };
-  }, [transactions, expenses, timePeriod]);
+  }, [transactions, timePeriod]);
 
   const PAYMENT_METHOD_COLORS: { [key: string]: string } = {
     'Efectivo': '#f59e0b',
@@ -121,7 +120,6 @@ const DashboardScreen: React.FC = () => {
             <button onClick={() => setIsTopSoldModalOpen(true)} className="text-left w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-xl">
                 <StatCard title="Unidades Vendidas" value={dashboardData.unitsSold.toString()} color="text-amber-500" />
             </button>
-            <StatCard title="Gastos" value={formatCurrency(dashboardData.totalExpenses)} color="text-red-600" />
             <StatCard title="Utilidad" value={formatCurrency(dashboardData.profit)} color={dashboardData.profit >= 0 ? 'text-blue-600' : 'text-red-600'} />
         </div>
         

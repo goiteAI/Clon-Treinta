@@ -18,7 +18,6 @@ const SettingsScreen: React.FC = () => {
         resetData,
         products,
         transactions,
-        expenses,
         contacts,
         stockInEntries,
         salesUnitCorrection,
@@ -60,7 +59,6 @@ const SettingsScreen: React.FC = () => {
         const dataToExport = {
             products,
             transactions,
-            expenses,
             contacts,
             companyInfo,
             stockInEntries,

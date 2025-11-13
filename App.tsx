@@ -6,10 +6,10 @@ import BottomNav from './components/layout/BottomNav';
 import DashboardScreen from './screens/DashboardScreen';
 import SalesScreen from './screens/SalesScreen';
 import InventoryScreen from './screens/InventoryScreen';
-import ExpensesScreen from './screens/ExpensesScreen';
 import ClientsScreen from './screens/ContactsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebtsScreen from './screens/DebtsScreen';
+import ChatScreen from './screens/ChatScreen';
 
 const MainApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -22,14 +22,14 @@ const MainApp: React.FC = () => {
         return <SalesScreen />;
       case 'inventory':
         return <InventoryScreen />;
-      case 'expenses':
-        return <ExpensesScreen />;
       case 'clients':
         return <ClientsScreen />;
        case 'settings':
         return <SettingsScreen />;
        case 'debts':
         return <DebtsScreen />;
+       case 'chat':
+        return <ChatScreen />;
       default:
         return <DashboardScreen />;
     }
