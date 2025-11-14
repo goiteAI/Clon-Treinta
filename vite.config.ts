@@ -39,9 +39,6 @@ export default defineConfig({
   ],
   build: {
     rollupOptions: {
-      external: [
-        '@google/genai',
-      ]
     }
   }
 });

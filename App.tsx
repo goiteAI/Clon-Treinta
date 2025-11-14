@@ -9,7 +9,6 @@ import InventoryScreen from './screens/InventoryScreen';
 import ClientsScreen from './screens/ContactsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebtsScreen from './screens/DebtsScreen';
-import ChatScreen from './screens/ChatScreen';
 
 const MainApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -28,8 +27,6 @@ const MainApp: React.FC = () => {
         return <SettingsScreen />;
        case 'debts':
         return <DebtsScreen />;
-       case 'chat':
-        return <ChatScreen />;
       default:
         return <DashboardScreen />;
     }

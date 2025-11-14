@@ -68,12 +68,7 @@ export interface StockInEntry {
   items: StockInEntryItem[];
 }
 
-export type Page = 'dashboard' | 'sales' | 'inventory' | 'clients' | 'settings' | 'debts' | 'chat';
-
-export interface ChatMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
+export type Page = 'dashboard' | 'sales' | 'inventory' | 'clients' | 'settings' | 'debts';
 
 export interface AppContextType {
   products: Product[];
