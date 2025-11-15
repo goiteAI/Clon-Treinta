@@ -15,7 +15,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, onClose }) => 
   const [isSharing, setIsSharing] = useState(false);
 
   const getProduct = (id: string) => products.find(p => p.id === id);
-  const getContactName = (id?: string) => id ? contacts.find(c => c.id === id)?.name || 'Venta sin Cliente' : 'Venta sin Cliente';
+  const getContactName = (id?: string) => id ? contacts.find(c => c.id === id)?.name || 'Cliente Ocasional' : 'Cliente Ocasional';
   const formatCurrency = (amount: number) => amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
   const totalPaid = transaction.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
