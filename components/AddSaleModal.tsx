@@ -133,7 +133,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
     const isEditMode = !!transactionToEdit;
 
     const [cart, setCart] = useState<TransactionItem[]>([]);
-    const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Crédito' | 'Transferencia'>('Efectivo');
+    const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Crédito' | 'Transferencia'>('Crédito');
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
     const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -215,20 +215,40 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
         let addedCount = 0;
         const notFound: string[] = [];
         let newCart = [...cart];
+        let globalQuantity: number | null = null;
+        
+        // First pass: check for global quantity phrases
+        const globalQtyRegex = /^\s*(\d+)\s+de\s+(cada\s+uno|c\/u|cada\s+producto)\s*$/i;
+        const firstLineMatch = lines[0].match(globalQtyRegex);
+        if (firstLineMatch) {
+            globalQuantity = parseInt(firstLineMatch[1], 10);
+            lines.shift(); // Remove this line from processing
+        }
+
 
         lines.forEach(line => {
             line = line.trim();
             if (!line) return;
 
-            const match = line.match(/^(?:(\d+)\s*(.*?)\s*|(.+?)\s*(\d+)\s*)$/);
+            // Regex to find quantity at the start, end, or middle of the line
+            const qtyAndNameRegex = /^(?:(\d+)\s+)?(.*?)(?:\s+(\d+))?$/i;
+            const match = line.match(qtyAndNameRegex);
             
-            let quantity = 1;
-            let namePart = line.toLowerCase();
+            if (!match) return;
 
-            if (match) {
-                quantity = parseInt(match[1] || match[4], 10);
-                namePart = (match[2] || match[3]).trim().toLowerCase();
+            const qtyStart = match[1];
+            let namePart = match[2].trim().toLowerCase();
+            const qtyEnd = match[3];
+
+            let quantity = globalQuantity || 1;
+            
+            if (qtyStart) {
+                quantity = parseInt(qtyStart, 10);
+            } else if (qtyEnd) {
+                 quantity = parseInt(qtyEnd, 10);
             }
+            
+            if (!namePart) return; // Skip if no product name is found
 
             const foundProduct = products.find(p => p.name.toLowerCase().includes(namePart));
 
@@ -259,7 +279,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
 
         setCart(newCart);
 
-        let resultMessage = `${addedCount} producto(s) añadidos al carrito.`;
+        let resultMessage = `${addedCount} tipo(s) de producto(s) añadidos/actualizados en el carrito.`;
         if (notFound.length > 0) {
             resultMessage += `\nNo se pudieron añadir: ${notFound.join(', ')}.`;
         }
@@ -343,7 +363,7 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                                 <textarea
                                     value={pasteText}
                                     onChange={(e) => setPasteText(e.target.value)}
-                                    placeholder="Pega aquí el pedido, por ejemplo:\n2 Coca-Colas\n1 Papas Margarita\nChocoramo"
+                                    placeholder="Pega aquí el pedido, por ejemplo:\n2 Coca-Colas\n10 de cada uno\nPapas Margarita\nChocoramo"
                                     className="w-full h-24 p-2 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                 />
                                 <button
