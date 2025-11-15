@@ -29,7 +29,7 @@ const AIAssistantModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     useEffect(() => {
         const initChat = async () => {
             try {
-                const ai = new GoogleGenerativeAI(process.env.API_KEY || '');
+                const ai = new GoogleGenerativeAI({apiKey: process.env.API_KEY || ''});
 
                 const tools: FunctionDeclarationTool[] = [
                     {
@@ -149,8 +149,7 @@ const AIAssistantModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 for (const fc of functionCalls) {
                     const { name, args } = fc;
                     let result: any;
-                    let functionSuccess = true;
-
+                    
                     try {
                         switch (name) {
                             case 'addProduct':
@@ -199,22 +198,17 @@ const AIAssistantModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             }
                             default:
                                 result = { success: false, message: `Función "${name}" no reconocida.` };
-                                functionSuccess = false;
                         }
                     } catch (e) {
                         result = { success: false, message: `Error ejecutando la función "${name}": ${(e as Error).message}` };
-                        functionSuccess = false;
                     }
 
                     functionResponses.push({
-                        functionResponse: {
-                            name,
-                            response: { name, content: result },
-                        }
+                        functionResponse: { name, response: result }
                     });
                 }
                 
-                response = await chat.sendMessage({ parts: functionResponses });
+                response = await chat.sendMessage(functionResponses);
             }
 
             const modelMessage: Message = { id: `model-${Date.now()}`, role: 'model', parts: [{ text: response.text }] };

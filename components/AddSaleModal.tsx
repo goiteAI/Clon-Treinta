@@ -1,11 +1,25 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { Transaction, TransactionItem, Product } from '../types';
+import { GoogleGenerativeAI, Type } from '@google/generative-ai';
 
 interface AddSaleModalProps {
     onClose: () => void;
     transactionToEdit?: Transaction | null;
 }
+
+const SparklesIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 21.75l-.648-1.188a2.25 2.25 0 01-1.471-1.471L13 18.75l1.188-.648a2.25 2.25 0 011.471-1.471L16.25 15l.648 1.188a2.25 2.25 0 011.471 1.471L19.5 18.75l-1.188.648a2.25 2.25 0 01-1.471 1.471z" />
+    </svg>
+);
+
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+);
+
 
 // Memoized component for better performance on product list rendering
 const ProductButton = React.memo(({ 
@@ -74,8 +88,6 @@ const CartItem = React.memo(({
     const inputId = `qty-input-${item.productId}`;
 
     useEffect(() => {
-        // Sync with parent state, but only if the user is not currently editing the input.
-        // This prevents the parent re-render from overwriting the user's input.
         if (document.activeElement?.id !== inputId) {
             setInputValue(String(item.quantity));
         }
@@ -83,7 +95,6 @@ const CartItem = React.memo(({
 
     const handleBlur = () => {
         const newQuantity = parseInt(inputValue, 10) || 0;
-        // On blur, we commit the change to the parent component.
         onUpdateQuantity(item.productId, newQuantity);
     };
 
@@ -133,6 +144,12 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
     const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
+
+    const [pastedOrder, setPastedOrder] = useState('');
+    const [isProcessingAI, setIsProcessingAI] = useState(false);
+    const [aiNotification, setAiNotification] = useState<string | null>(null);
+    const [showPasteSection, setShowPasteSection] = useState(false);
+
 
     const getAvailableStock = useCallback((product: Product) => {
         if (!isEditMode || !transactionToEdit) {
@@ -199,6 +216,95 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
 
     const totalAmount = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
 
+    const handleProcessOrder = async () => {
+        setIsProcessingAI(true);
+        setAiNotification(null);
+        
+        const availableProductNames = products.map(p => p.name).join(', ');
+        
+        try {
+            const ai = new GoogleGenerativeAI({ apiKey: process.env.API_KEY || '' });
+            const prompt = `Analiza el siguiente texto de un pedido y extrae los productos y sus cantidades. Solo puedes usar productos de la lista de "Productos disponibles". Ignora cualquier texto que no sea un pedido, saludos o despedidas.
+
+Texto del pedido:
+"${pastedOrder}"
+
+Productos disponibles:
+${availableProductNames}
+
+Responde únicamente con el JSON.`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                productName: { type: Type.STRING, description: `El nombre del producto, debe coincidir exactamente con uno de la lista de productos disponibles.` },
+                                quantity: { type: Type.NUMBER, description: 'La cantidad del producto solicitado.' },
+                            },
+                            required: ['productName', 'quantity'],
+                        },
+                    },
+                }
+            });
+
+            const parsedItems = JSON.parse(response.text);
+            
+            if (!Array.isArray(parsedItems)) {
+                throw new Error("La respuesta de la IA no es una lista válida.");
+            }
+
+            const newCartItems: TransactionItem[] = [];
+            const notFoundProducts: string[] = [];
+
+            for (const item of parsedItems) {
+                const product = products.find(p => p.name.toLowerCase() === item.productName.toLowerCase());
+                if (product) {
+                    newCartItems.push({ productId: product.id, quantity: item.quantity, unitPrice: product.price });
+                } else {
+                    notFoundProducts.push(item.productName);
+                }
+            }
+            
+            setCart(currentCart => {
+                 const mergedCart = [...currentCart];
+                 newCartItems.forEach(newItem => {
+                    const existingItemIndex = mergedCart.findIndex(ci => ci.productId === newItem.productId);
+                    if (existingItemIndex > -1) {
+                        mergedCart[existingItemIndex].quantity += newItem.quantity;
+                    } else {
+                        mergedCart.push(newItem);
+                    }
+                });
+
+                return mergedCart.map(item => {
+                    const product = products.find(p => p.id === item.productId)!;
+                    const availableStock = getAvailableStock(product);
+                    return { ...item, quantity: Math.min(item.quantity, availableStock) };
+                }).filter(item => item.quantity > 0);
+            });
+
+
+            if (notFoundProducts.length > 0) {
+                setAiNotification(`No se encontraron: ${notFoundProducts.join(', ')}. Por favor, añádelos manualmente.`);
+            } else {
+                setAiNotification('¡Pedido añadido al carrito!');
+                setTimeout(() => setAiNotification(null), 3000);
+            }
+
+        } catch (error) {
+            console.error("Error processing order with AI:", error);
+            setAiNotification('Hubo un error al analizar el pedido. Por favor, intenta de nuevo.');
+        } finally {
+            setIsProcessingAI(false);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (cart.length === 0) return;
@@ -247,6 +353,34 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                 </div>
                 
                 <div className="p-4 flex-1 overflow-y-auto pr-2 space-y-4">
+                     <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <button type="button" onClick={() => setShowPasteSection(!showPasteSection)} className="flex justify-between items-center w-full p-3 font-semibold text-slate-700 dark:text-slate-300">
+                            <span>Pegar pedido de WhatsApp</span>
+                            <ChevronDownIcon className={`w-5 h-5 transition-transform ${showPasteSection ? 'rotate-180' : ''}`} />
+                        </button>
+                        {showPasteSection && (
+                            <div className="p-3 border-t dark:border-slate-700 space-y-2">
+                                <textarea 
+                                    value={pastedOrder}
+                                    onChange={(e) => setPastedOrder(e.target.value)}
+                                    placeholder="Pega aquí el mensaje de tu cliente..."
+                                    className="w-full h-24 p-2 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                    disabled={isProcessingAI}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleProcessOrder}
+                                    disabled={isProcessingAI || !pastedOrder.trim()}
+                                    className="w-full flex items-center justify-center gap-2 p-2 bg-green-500 text-white rounded-md transition-colors hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed"
+                                >
+                                    <SparklesIcon className="w-5 h-5"/>
+                                    {isProcessingAI ? 'Procesando...' : 'Analizar Pedido con IA'}
+                                </button>
+                                {aiNotification && <p className={`text-sm mt-2 ${aiNotification.startsWith('No se encontraron') ? 'text-red-500' : 'text-green-600'}`}>{aiNotification}</p>}
+                            </div>
+                        )}
+                    </div>
+
                     <div>
                         <h3 className="font-semibold text-slate-700 dark:text-slate-300">Productos Disponibles</h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
