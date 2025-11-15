@@ -137,6 +137,11 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
     const [contactId, setContactId] = useState<string>('');
     const [paymentDays, setPaymentDays] = useState<number>(0);
     const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
+    
+    // State for paste order feature
+    const [isPasteOrderOpen, setIsPasteOrderOpen] = useState(false);
+    const [pasteText, setPasteText] = useState('');
+    const [parseResult, setParseResult] = useState<string | null>(null);
 
     const getAvailableStock = useCallback((product: Product) => {
         if (!isEditMode || !transactionToEdit) {
@@ -203,6 +208,65 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
 
     const totalAmount = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
 
+    const handleParseOrder = () => {
+        if (!pasteText.trim()) return;
+
+        const lines = pasteText.trim().split('\n');
+        let addedCount = 0;
+        const notFound: string[] = [];
+        let newCart = [...cart];
+
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line) return;
+
+            const match = line.match(/^(?:(\d+)\s*(.*?)\s*|(.+?)\s*(\d+)\s*)$/);
+            
+            let quantity = 1;
+            let namePart = line.toLowerCase();
+
+            if (match) {
+                quantity = parseInt(match[1] || match[4], 10);
+                namePart = (match[2] || match[3]).trim().toLowerCase();
+            }
+
+            const foundProduct = products.find(p => p.name.toLowerCase().includes(namePart));
+
+            if (foundProduct) {
+                const availableStock = getAvailableStock(foundProduct);
+                const existingCartItem = newCart.find(item => item.productId === foundProduct.id);
+                const currentQuantityInCart = existingCartItem?.quantity || 0;
+                const quantityToAdd = Math.min(quantity, availableStock - currentQuantityInCart);
+
+                if (quantityToAdd > 0) {
+                    if (existingCartItem) {
+                        newCart = newCart.map(item => 
+                            item.productId === foundProduct.id 
+                            ? { ...item, quantity: item.quantity + quantityToAdd } 
+                            : item
+                        );
+                    } else {
+                        newCart.push({ productId: foundProduct.id, quantity: quantityToAdd, unitPrice: foundProduct.price });
+                    }
+                    addedCount++;
+                } else {
+                    notFound.push(`${line} (Sin stock)`);
+                }
+            } else {
+                notFound.push(line);
+            }
+        });
+
+        setCart(newCart);
+
+        let resultMessage = `${addedCount} producto(s) añadidos al carrito.`;
+        if (notFound.length > 0) {
+            resultMessage += `\nNo se pudieron añadir: ${notFound.join(', ')}.`;
+        }
+        setParseResult(resultMessage);
+        setPasteText(''); // Clear text area after parsing
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (cart.length === 0) return;
@@ -263,6 +327,39 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ onClose, transactionToEdit 
                                 />
                             ))}
                         </div>
+                    </div>
+
+                    <div className="border-t pt-4 dark:border-slate-700">
+                        <button
+                            onClick={() => setIsPasteOrderOpen(!isPasteOrderOpen)}
+                            className="w-full flex justify-between items-center font-semibold text-slate-700 dark:text-slate-300"
+                            aria-expanded={isPasteOrderOpen}
+                        >
+                            Pegar Pedido Rápido
+                            <ChevronDownIcon className={`w-5 h-5 transition-transform ${isPasteOrderOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isPasteOrderOpen && (
+                            <div className="mt-2 space-y-2">
+                                <textarea
+                                    value={pasteText}
+                                    onChange={(e) => setPasteText(e.target.value)}
+                                    placeholder="Pega aquí el pedido, por ejemplo:\n2 Coca-Colas\n1 Papas Margarita\nChocoramo"
+                                    className="w-full h-24 p-2 border rounded-md focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleParseOrder}
+                                    className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                                >
+                                    Analizar Pedido
+                                </button>
+                                {parseResult && (
+                                    <div className="p-2 text-sm bg-slate-100 rounded-md dark:bg-slate-700/50 whitespace-pre-wrap">
+                                        {parseResult}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div>
