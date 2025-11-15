@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { GoogleGenAI, FunctionDeclaration, Type, Chat, Tool } from '@google/genai';
+import { GoogleGenAI, FunctionDeclaration, Type, Chat } from '@google/genai';
 import type { Contact, Product, Transaction, TransactionItem } from '../types';
 
 type Message = {
@@ -214,11 +214,14 @@ const AIAssistantModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 }
 
 
-                const functionResponseResult = await chatRef.current.sendMessage({
-                    tool_response: {
-                        functionResponses: { id: functionCall.id, name, response: functionResult },
-                    }
-                });
+                const functionResponseResult = await chatRef.current.sendMessage([
+                    {
+                        functionResponse: {
+                            name,
+                            response: functionResult,
+                        },
+                    },
+                ]);
                 setMessages(prev => [...prev, { role: 'model', text: functionResponseResult.text }]);
 
             } else {
@@ -240,7 +243,7 @@ const AIAssistantModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <h2 id="ai-assistant-title" className="text-xl font-bold text-slate-800 dark:text-slate-100">Asistente AI</h2>
                 </div>
                 <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar chat">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </header>
             
