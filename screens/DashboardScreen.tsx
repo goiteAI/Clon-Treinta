@@ -3,7 +3,6 @@ import { useAppContext } from '../context/AppContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import TopSoldProductsModal from '../components/TopSoldProductsModal';
 import AddSaleModal from '../components/AddSaleModal';
-import AIAssistantModal from '../components/AIAssistantModal';
 import type { Transaction } from '../types';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
@@ -15,19 +14,11 @@ const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ t
   </div>
 );
 
-const SparklesIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 21.75l-.648-1.188a2.25 2.25 0 01-1.471-1.471L13 18.75l1.188-.648a2.25 2.25 0 011.471-1.471L16.25 15l.648 1.188a2.25 2.25 0 011.471 1.471L19.5 18.75l-1.188.648a2.25 2.25 0 01-1.471 1.471z" />
-    </svg>
-);
-
-
 const DashboardScreen: React.FC = () => {
   const { transactions, products } = useAppContext();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
   const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
 
   const canAddSale = products.length > 0;
 
@@ -167,15 +158,6 @@ const DashboardScreen: React.FC = () => {
       </div>
 
       <button
-        onClick={() => setIsAssistantModalOpen(true)}
-        className="fixed bottom-20 left-5 bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform transform hover:scale-105 z-30"
-        aria-label="Asistente de IA"
-        title="Asistente de IA"
-      >
-          <SparklesIcon className="w-7 h-7" />
-      </button>
-
-      <button
         onClick={() => setIsSaleModalOpen(true)}
         disabled={!canAddSale}
         className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400 disabled:transform-none z-30"
@@ -188,7 +170,6 @@ const DashboardScreen: React.FC = () => {
       </button>
 
       {isSaleModalOpen && <AddSaleModal transactionToEdit={null} onClose={() => setIsSaleModalOpen(false)} />}
-      {isAssistantModalOpen && <AIAssistantModal onClose={() => setIsAssistantModalOpen(false)} />}
       {isTopSoldModalOpen && <TopSoldProductsModal onClose={() => setIsTopSoldModalOpen(false)} transactions={dashboardData.filteredTransactions} periodTitle={periodTitles[timePeriod]} />}
     </div>
   );
