@@ -36,10 +36,5 @@ export default defineConfig({
         "background_color": "#f1f5f9"
       }
     })
-  ],
-  build: {
-    rollupOptions: {
-      external: ['@google/genai']
-    }
-  }
+  ]
 });

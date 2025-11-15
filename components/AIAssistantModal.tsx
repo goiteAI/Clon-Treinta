@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { GoogleGenAI, FunctionDeclaration, Type, Chat } from '@google/genai';
+import { GoogleGenAI, FunctionDeclaration, Type, Chat } from '@google/generative-ai';
 import type { Contact, Product, Transaction, TransactionItem } from '../types';
 
 type Message = {
