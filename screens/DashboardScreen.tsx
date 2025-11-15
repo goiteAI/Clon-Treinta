@@ -3,6 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import TopSoldProductsModal from '../components/TopSoldProductsModal';
 import AddSaleModal from '../components/AddSaleModal';
+import AIAssistantModal from '../components/AIAssistantModal';
 import type { Transaction } from '../types';
 
 type TimePeriod = 'today' | 'week' | 'month' | 'year';
@@ -14,11 +15,30 @@ const StatCard: React.FC<{ title: string; value: string; color: string }> = ({ t
   </div>
 );
 
+const GeminiIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path d="M6.02002 8.09025C6.02002 5.29025 8.27002 3.04025 11.07 3.04025C13.87 3.04025 16.12 5.29025 16.12 8.09025C16.12 10.8903 13.87 13.1403 11.07 13.1403C8.27002 13.1403 6.02002 10.8903 6.02002 8.09025Z" fill="url(#paint0_linear_1_2)"/>
+    <path d="M12.9299 20.9598C12.9299 18.1598 15.1799 15.9098 17.9799 15.9098C20.7799 15.9098 23.0299 18.1598 23.0299 20.9598C23.0299 23.7598 20.7799 26.0098 17.9799 26.0098C15.1799 26.0098 12.9299 23.7598 12.9299 20.9598Z" fill="url(#paint1_linear_1_2)"/>
+    <defs>
+    <linearGradient id="paint0_linear_1_2" x1="11.07" y1="3.04025" x2="11.07" y2="13.1403" gradientUnits="userSpaceOnUse">
+    <stop stopColor="#63EAF1"/>
+    <stop offset="1" stopColor="#4A85FF"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear_1_2" x1="17.9799" y1="15.9098" x2="17.9799" y2="26.0098" gradientUnits="userSpaceOnUse">
+    <stop stopColor="#F4B3FF"/>
+    <stop offset="1" stopColor="#A882FF"/>
+    </linearGradient>
+    </defs>
+  </svg>
+);
+
+
 const DashboardScreen: React.FC = () => {
   const { transactions, products } = useAppContext();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
   const [isTopSoldModalOpen, setIsTopSoldModalOpen] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
   const canAddSale = products.length > 0;
 
@@ -158,6 +178,15 @@ const DashboardScreen: React.FC = () => {
       </div>
 
       <button
+        onClick={() => setIsAiAssistantOpen(true)}
+        className="fixed bottom-20 left-5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-transform transform hover:scale-105 z-30"
+        aria-label="Abrir Asistente AI"
+        title="Asistente AI"
+      >
+          <GeminiIcon className="w-7 h-7" />
+      </button>
+
+      <button
         onClick={() => setIsSaleModalOpen(true)}
         disabled={!canAddSale}
         className="fixed bottom-20 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400 disabled:transform-none z-30"
@@ -171,6 +200,7 @@ const DashboardScreen: React.FC = () => {
 
       {isSaleModalOpen && <AddSaleModal transactionToEdit={null} onClose={() => setIsSaleModalOpen(false)} />}
       {isTopSoldModalOpen && <TopSoldProductsModal onClose={() => setIsTopSoldModalOpen(false)} transactions={dashboardData.filteredTransactions} periodTitle={periodTitles[timePeriod]} />}
+      {isAiAssistantOpen && <AIAssistantModal onClose={() => setIsAiAssistantOpen(false)} />}
     </div>
   );
 };
