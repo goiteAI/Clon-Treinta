@@ -10,7 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'script',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true
       },
       manifest: {
         "short_name": "Mi Negocio",
@@ -30,7 +32,7 @@ export default defineConfig({
             "purpose": "any maskable"
           }
         ],
-        "start_url": ".",
+        "start_url": "/",
         "display": "standalone",
         "theme_color": "#22c55e",
         "background_color": "#f1f5f9"
